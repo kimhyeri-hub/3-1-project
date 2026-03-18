@@ -1,0 +1,14 @@
+# 가상환경 (용량이 너무 커서 제외)
+backend/venv/
+venv/
+
+# 설정 및 비밀 키 (보안을 위해 제외)
+.env
+backend/.env
+
+# 파이썬 실행 결과물 (불필요)
+**/__pycache__/
+*.pyc
+
+# 에디터 설정
+.vscode/
