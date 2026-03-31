@@ -1,5 +1,5 @@
 from google.cloud import vision
-from app.config import settings
+from config import settings
 
 def extract_text_from_image(contents):
     client = vision.ImageAnnotatorClient(client_options={"api_key": settings.GOOGLE_API_KEY})

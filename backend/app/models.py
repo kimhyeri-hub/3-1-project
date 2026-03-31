@@ -1,7 +1,7 @@
 #DB 테이블 설계 (User, Appointment ..등)
 from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Boolean
 from sqlalchemy.orm import relationship
-from .database import Base
+from database import Base
 import datetime
 
 class User(Base):
