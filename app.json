@@ -1,0 +1,50 @@
+{
+  "expo": {
+    "updates": {
+  "enabled": false
+},
+    "name": "MediScan",
+    "slug": "mediscan",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "backgroundColor": "#2C6B4F"
+    },
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.yourname.mediscan",
+      "infoPlist": {
+        "NSCameraUsageDescription": "약봉투를 촬영하여 성분을 분석합니다.",
+        "NSPhotoLibraryUsageDescription": "앨범에서 약봉투 사진을 선택합니다."
+      }
+    },
+    "android": {
+      "package": "com.yourname.mediscan",
+      "permissions": [
+        "CAMERA",
+        "READ_EXTERNAL_STORAGE",
+        "RECEIVE_BOOT_COMPLETED",
+        "VIBRATE"
+      ]
+    },
+    "plugins": [
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/icon.png",
+          "color": "#2C6B4F",
+          "sounds": []
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "앨범에서 약봉투 사진을 선택합니다.",
+          "cameraPermission": "약봉투를 촬영하여 성분을 분석합니다."
+        }
+      ]
+    ]
+  }
+}
