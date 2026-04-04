@@ -61,6 +61,8 @@ sqlparse==0.5.3
 starlette==0.46.2
 sympy==1.14.0
 threadpoolctl==3.6.0
+passlib[bcrypt]==1.7.4
+bcrypt==3.2.2
 --extra-index-url https://download.pytorch.org/whl/cpu
 torch==2.10.0+cpu
 torchvision==0.25.0+cpu

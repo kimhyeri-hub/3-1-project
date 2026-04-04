@@ -12,6 +12,7 @@ load_dotenv(dotenv_path=env_path)
 class Settings:
     GOOGLE_API_KEY = os.getenv("GOOGLE_VISION_API_KEY")
     OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+    SECRET_KEY = os.getenv("SECRET_KEY", "default-secret-key")
 
 settings = Settings()
 

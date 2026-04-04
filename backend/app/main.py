@@ -19,13 +19,15 @@ import database
 from database import engine
 from services.ocr_service import extract_text_from_image
 from services.gpt_service import analyze_medicine_text
-# --- [추가] 식약처 서비스 임포트 ---
 from services.drug_service import get_drug_detail_info
+from routers import auth as auth_router
 
 # 서버 실행 시 DB 테이블 생성
 models.Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="약쏘옥(Yaksok) API", description="AI OCR 및 식약처 데이터를 활용한 맞춤형 복약 관리")
+
+app.include_router(auth_router.router)
 
 app.add_middleware(
     CORSMiddleware,
