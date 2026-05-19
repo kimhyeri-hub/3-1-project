@@ -13,6 +13,7 @@ import MedicineScreen from './src/screens/MedicineScreen';
 import MealScreen from './src/screens/MealScreen';
 import HistoryScreen from './src/screens/HistoryScreen';
 import { COLORS } from './src/utils/theme';
+import MyMedicineScreen from './src/screens/MyMedicineScreen';
 
 // 앱 포그라운드 상태에서도 알림 표시
 Notifications.setNotificationHandler({
@@ -42,6 +43,7 @@ export default function App() {
   '약 분석': focused ? 'medical' : 'medical-outline',
   '식사 알림': focused ? 'restaurant' : 'restaurant-outline',
   '기록': focused ? 'time' : 'time-outline',
+  '내 약': focused ? 'heart' : 'heart-outline',
 };
             return <Ionicons name={icons[route.name]} size={size} color={color} />;
           },
@@ -63,6 +65,7 @@ export default function App() {
         <Tab.Screen name="약 분석" component={MedicineScreen} />
         <Tab.Screen name="식사 알림" component={MealScreen} />
         <Tab.Screen name="기록" component={HistoryScreen} />
+        <Tab.Screen name="내 약" component={MyMedicineScreen} />
       </Tab.Navigator>
     </NavigationContainer>
   );
