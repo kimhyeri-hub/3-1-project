@@ -12,11 +12,13 @@ load_dotenv(dotenv_path=env_path)
 class Settings:
     GOOGLE_API_KEY = os.getenv("GOOGLE_VISION_API_KEY")
     OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+    SECRET_KEY = os.getenv("SECRET_KEY", "default-secret-key")
+    DUR_API_KEY = os.getenv("DUR_API_KEY")
 
 settings = Settings()
 
 # 진단용: 서버 켤 때 키가 잘 들어왔는지 터미널에 찍어봅니다.
 if not settings.OPENAI_API_KEY:
-    print(f"❌ 설정 오류: .env 파일을 찾지 못했거나 키가 비어있습니다. (경로: {env_path})")
+    print(f"[ERROR] 설정 오류: .env 파일을 찾지 못했거나 키가 비어있습니다. (경로: {env_path})")
 else:
-    print(f"✅ 설정 로드 완료! OpenAI 키 확인됨.")
+    print(f"[OK] 설정 로드 완료! OpenAI 키 확인됨.")

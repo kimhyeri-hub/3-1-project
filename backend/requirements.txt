@@ -1,4 +1,8 @@
+APScheduler==3.10.4
+firebase-admin==6.5.0
 annotated-doc==0.0.4
+bcrypt==5.0.0
+passlib==1.7.4
 annotated-types==0.7.0
 anyio==4.12.1
 asgiref==3.9.2
@@ -61,8 +65,9 @@ sqlparse==0.5.3
 starlette==0.46.2
 sympy==1.14.0
 threadpoolctl==3.6.0
-torch==2.10.0+cpu
-torchvision==0.25.0+cpu
+# Install separately: pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
+# torch==2.10.0+cpu
+# torchvision==0.25.0+cpu
 tqdm==4.67.1
 typing-inspection==0.4.2
 typing_extensions==4.15.0
