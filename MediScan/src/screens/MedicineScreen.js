@@ -4,6 +4,7 @@ import {
   Image, SafeAreaView, Alert, Platform,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS, RADIUS, FONT, SHADOW } from '../utils/theme';
 import { analyzeMedicineImage } from '../services/claudeApi';
@@ -39,13 +40,34 @@ export default function MedicineScreen() {
     }
   };
 
+  const saveMedicine = async (data) => {
+    try {
+      const raw = await AsyncStorage.getItem('my_medicines');
+      const list = raw ? JSON.parse(raw) : [];
+      const newMed = {
+        id: Date.now().toString(),
+        name: data.medicineName,
+        ingredient: data.ingredients?.[0]?.name || '성분 정보 없음',
+        dosage: data.dosage?.frequency || '복용법 정보 없음',
+        tags: [],
+      };
+      list.push(newMed);
+      await AsyncStorage.setItem('my_medicines', JSON.stringify(list));
+    } catch (e) {
+      console.error('약 저장 실패:', e);
+    }
+  };
+
   const analyzeImage = async () => {
     if (!imageUri) return;
     setLoading(true);
     try {
       const data = await analyzeMedicineImage(imageUri);
       if (data.error) Alert.alert('인식 실패', data.error);
-      else setResult(data);
+      else {
+        setResult(data);
+        await saveMedicine(data);
+      }
     } catch (e) {
       Alert.alert('오류', e.message || '분석 중 오류가 발생했습니다.');
     } finally {
@@ -63,14 +85,11 @@ export default function MedicineScreen() {
 
         <Text style={styles.guideText}>처방전이나 알약 사진을 올려주세요</Text>
 
-        {/* 이미지 프리뷰 박스 */}
         <View style={styles.previewBox}>
-          {/* 모서리 장식 */}
           <View style={[styles.corner, styles.cornerTL]} />
           <View style={[styles.corner, styles.cornerTR]} />
           <View style={[styles.corner, styles.cornerBL]} />
           <View style={[styles.corner, styles.cornerBR]} />
-
           {imageUri ? (
             <Image source={{ uri: imageUri }} style={styles.previewImage} resizeMode="contain" />
           ) : (
@@ -81,7 +100,6 @@ export default function MedicineScreen() {
           )}
         </View>
 
-        {/* 버튼 두 개 */}
         <View style={styles.btnRow}>
           <TouchableOpacity style={styles.outlineBtn} onPress={() => pickImage(false)} activeOpacity={0.8}>
             <Ionicons name="images-outline" size={16} color={COLORS.textSecondary} />
@@ -93,7 +111,6 @@ export default function MedicineScreen() {
           </TouchableOpacity>
         </View>
 
-        {/* 분석 시작 버튼 */}
         <TouchableOpacity
           style={[styles.analyzeBtn, (!imageUri || loading) && styles.analyzeBtnDisabled]}
           onPress={analyzeImage}
@@ -104,7 +121,6 @@ export default function MedicineScreen() {
           <Text style={styles.analyzeBtnText}>{loading ? '분석 중...' : '분석 시작하기'}</Text>
         </TouchableOpacity>
 
-        {/* 잘 찍는 방법 */}
         <View style={styles.tipsBox}>
           <Text style={styles.tipsTitle}>📌 잘 찍는 방법</Text>
           <Text style={styles.tipItem}>• 글자가 선명하게 보이도록 촬영하세요</Text>
@@ -112,7 +128,6 @@ export default function MedicineScreen() {
           <Text style={styles.tipItem}>• 밝은 곳에서 그림자 없이 찍으면 더 정확해요</Text>
         </View>
 
-        {/* 결과 */}
         {result && !loading && <MedicineResult result={result} />}
 
       </ScrollView>
@@ -191,7 +206,6 @@ const styles = StyleSheet.create({
   headerTitle: { fontSize: 18, fontWeight: FONT.medium, color: '#fff' },
   scroll: { flex: 1 },
   content: { padding: 16, paddingBottom: 32 },
-
   guideText: {
     fontSize: 15,
     color: COLORS.textSecondary,
@@ -199,8 +213,6 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     marginTop: 4,
   },
-
-  // 프리뷰 박스
   previewBox: {
     height: 220,
     borderRadius: RADIUS.lg,
@@ -225,8 +237,6 @@ const styles = StyleSheet.create({
   previewEmpty: { alignItems: 'center', gap: 8 },
   previewEmptyText: { fontSize: 13, color: COLORS.textMuted },
   previewImage: { width: '100%', height: '100%' },
-
-  // 버튼 두 개
   btnRow: { flexDirection: 'row', gap: 10, marginBottom: 12 },
   outlineBtn: {
     flex: 1,
@@ -241,8 +251,6 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.surface,
   },
   outlineBtnText: { fontSize: 13, color: COLORS.textSecondary, fontWeight: FONT.medium },
-
-  // 분석 버튼
   analyzeBtn: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -255,8 +263,6 @@ const styles = StyleSheet.create({
   },
   analyzeBtnDisabled: { backgroundColor: COLORS.border },
   analyzeBtnText: { fontSize: 15, fontWeight: FONT.medium, color: '#fff' },
-
-  // 팁 박스
   tipsBox: {
     backgroundColor: COLORS.surface,
     borderRadius: RADIUS.lg,
@@ -268,8 +274,6 @@ const styles = StyleSheet.create({
   },
   tipsTitle: { fontSize: 13, fontWeight: FONT.medium, color: COLORS.textPrimary, marginBottom: 4 },
   tipItem: { fontSize: 12, color: COLORS.textSecondary, lineHeight: 18 },
-
-  // 결과
   medHeader: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, marginBottom: 16, paddingBottom: 16, borderBottomWidth: 0.5, borderBottomColor: COLORS.borderLight },
   medIconWrap: { width: 36, height: 36, borderRadius: RADIUS.md, backgroundColor: COLORS.primaryLight, alignItems: 'center', justifyContent: 'center' },
   medName: { fontSize: 17, fontWeight: FONT.medium, color: COLORS.textPrimary, lineHeight: 22 },
