@@ -1,55 +1,12 @@
-import React from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity, StyleSheet,
-  SafeAreaView, Alert, Platform,
+  SafeAreaView, Alert, Platform, RefreshControl,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS, RADIUS, FONT } from '../utils/theme';
 import { Card, Badge } from '../components/UIComponents';
-
-// 예시 데이터 (실제 앱에서는 useHistory 훅으로 AsyncStorage에서 불러옴)
-const MOCK_HISTORY = [
-  {
-    id: '1',
-    type: 'medicine',
-    title: '타이레놀 500mg',
-    subtitle: '아세트아미노펜 · 해열/진통',
-    timestamp: new Date(Date.now() - 1000 * 60 * 30).toISOString(),
-    status: 'done',
-  },
-  {
-    id: '2',
-    type: 'meal',
-    title: '점심 식사 알림',
-    subtitle: '30분 후 알림 · 오후 12:30',
-    timestamp: new Date(Date.now() - 1000 * 60 * 90).toISOString(),
-    status: 'taken',
-  },
-  {
-    id: '3',
-    type: 'meal',
-    title: '아침 식사 알림',
-    subtitle: '30분 후 알림 · 오전 08:00',
-    timestamp: new Date(Date.now() - 1000 * 60 * 60 * 6).toISOString(),
-    status: 'missed',
-  },
-  {
-    id: '4',
-    type: 'medicine',
-    title: '게보린',
-    subtitle: '이소프로필안티피린 · 진통',
-    timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24).toISOString(),
-    status: 'done',
-  },
-  {
-    id: '5',
-    type: 'meal',
-    title: '저녁 식사 알림',
-    subtitle: '30분 후 알림 · 오후 07:00',
-    timestamp: new Date(Date.now() - 1000 * 60 * 60 * 25).toISOString(),
-    status: 'taken',
-  },
-];
+import { api } from '../services/apiService';
 
 const STATUS_CONFIG = {
   done: { label: '분석완료', type: 'success' },
@@ -67,9 +24,54 @@ function formatRelativeTime(iso) {
 }
 
 export default function HistoryScreen() {
-  const medicineCount = MOCK_HISTORY.filter((h) => h.type === 'medicine').length;
-  const takenCount = MOCK_HISTORY.filter((h) => h.status === 'taken').length;
-  const missedCount = MOCK_HISTORY.filter((h) => h.status === 'missed').length;
+  const [history, setHistory] = useState([]);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const loadLogs = useCallback(async () => {
+    try {
+      const logs = await api.getNotificationLogs();
+      if (logs && Array.isArray(logs)) {
+        const mapped = logs.map((log) => ({
+          id: String(log.log_id),
+          type: 'meal',
+          title: log.medicine_name,
+          subtitle: `복약 예정 · ${new Date(log.scheduled_time).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })}`,
+          timestamp: log.scheduled_time,
+          status: log.is_taken ? 'taken' : 'missed',
+          log_id: log.log_id,
+        }));
+        setHistory(mapped);
+      }
+    } catch (e) {
+      console.warn('기록 불러오기 실패:', e);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadLogs();
+  }, [loadLogs]);
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await loadLogs();
+    setRefreshing(false);
+  };
+
+  const handleMarkTaken = async (logId) => {
+    try {
+      await api.markAsTaken(logId);
+      setHistory((prev) =>
+        prev.map((h) => h.log_id === logId ? { ...h, status: 'taken' } : h)
+      );
+    } catch (e) {
+      Alert.alert('오류', '복용 완료 처리에 실패했습니다.');
+    }
+  };
+
+  const displayList = history;
+  const takenCount = displayList.filter((h) => h.status === 'taken').length;
+  const missedCount = displayList.filter((h) => h.status === 'missed').length;
+  const totalCount = displayList.length;
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -78,13 +80,17 @@ export default function HistoryScreen() {
         <Text style={styles.headerTitle}>기록</Text>
       </View>
 
-      <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
+      <ScrollView
+        style={styles.scroll}
+        contentContainerStyle={styles.content}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+      >
         {/* Stats Row */}
         <View style={styles.statsRow}>
           <View style={styles.statCard}>
-            <Ionicons name="medical" size={18} color={COLORS.primary} />
-            <Text style={styles.statNumber}>{medicineCount}</Text>
-            <Text style={styles.statLabel}>약 분석</Text>
+            <Ionicons name="list" size={18} color={COLORS.primary} />
+            <Text style={styles.statNumber}>{totalCount}</Text>
+            <Text style={styles.statLabel}>전체 알림</Text>
           </View>
           <View style={styles.statCard}>
             <Ionicons name="checkmark-circle" size={18} color={COLORS.primary} />
@@ -99,37 +105,49 @@ export default function HistoryScreen() {
         </View>
 
         {/* History List */}
-        <Text style={styles.sectionTitle}>최근 활동</Text>
-        {MOCK_HISTORY.map((item) => {
-          const statusConf = STATUS_CONFIG[item.status] || STATUS_CONFIG.done;
-          const isMedicine = item.type === 'medicine';
-          return (
-            <TouchableOpacity key={item.id} activeOpacity={0.7}>
-              <Card style={styles.historyCard}>
-                <View style={styles.historyRow}>
-                  <View style={[
-                    styles.historyIcon,
-                    { backgroundColor: isMedicine ? COLORS.primaryLight : COLORS.amberLight },
-                  ]}>
-                    <Ionicons
-                      name={isMedicine ? 'medical-outline' : 'restaurant-outline'}
-                      size={16}
-                      color={isMedicine ? COLORS.primary : COLORS.amber}
-                    />
+        <Text style={styles.sectionTitle}>복약 알림 기록</Text>
+        {displayList.length === 0 ? (
+          <View style={{ alignItems: 'center', paddingTop: 40 }}>
+            <Text style={{ color: COLORS.textMuted, fontSize: 14 }}>기록이 없습니다.</Text>
+            <Text style={{ color: COLORS.textMuted, fontSize: 12, marginTop: 4 }}>
+              아래로 당겨서 새로고침 하거나 식사 알림을 눌러보세요.
+            </Text>
+          </View>
+        ) : (
+          displayList.map((item) => {
+            const statusConf = STATUS_CONFIG[item.status] || STATUS_CONFIG.done;
+            return (
+              <TouchableOpacity
+                key={item.id}
+                activeOpacity={0.7}
+                onPress={() => {
+                  if (item.status !== 'taken' && item.log_id) {
+                    Alert.alert('복용 완료', '복용 완료로 기록할까요?', [
+                      { text: '취소', style: 'cancel' },
+                      { text: '확인', onPress: () => handleMarkTaken(item.log_id) },
+                    ]);
+                  }
+                }}
+              >
+                <Card style={styles.historyCard}>
+                  <View style={styles.historyRow}>
+                    <View style={[styles.historyIcon, { backgroundColor: COLORS.primaryLight }]}>
+                      <Ionicons name="medical-outline" size={16} color={COLORS.primary} />
+                    </View>
+                    <View style={styles.historyInfo}>
+                      <Text style={styles.historyTitle}>{item.title}</Text>
+                      <Text style={styles.historySub}>{item.subtitle}</Text>
+                    </View>
+                    <View style={styles.historyRight}>
+                      <Badge label={statusConf.label} type={statusConf.type} />
+                      <Text style={styles.historyTime}>{formatRelativeTime(item.timestamp)}</Text>
+                    </View>
                   </View>
-                  <View style={styles.historyInfo}>
-                    <Text style={styles.historyTitle}>{item.title}</Text>
-                    <Text style={styles.historySub}>{item.subtitle}</Text>
-                  </View>
-                  <View style={styles.historyRight}>
-                    <Badge label={statusConf.label} type={statusConf.type} />
-                    <Text style={styles.historyTime}>{formatRelativeTime(item.timestamp)}</Text>
-                  </View>
-                </View>
-              </Card>
-            </TouchableOpacity>
-          );
-        })}
+                </Card>
+              </TouchableOpacity>
+            );
+          })
+        )}
 
         {/* Clear Button */}
         <TouchableOpacity

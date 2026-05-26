@@ -7,7 +7,7 @@ import * as ImagePicker from 'expo-image-picker';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS, RADIUS, FONT, SHADOW } from '../utils/theme';
-import { analyzeMedicineImage } from '../services/claudeApi';
+import { api } from '../services/apiService';
 import { Card, Badge, InfoRow, WarningBox, SectionHeader } from '../components/UIComponents';
 
 export default function MedicineScreen() {
@@ -62,14 +62,33 @@ export default function MedicineScreen() {
     if (!imageUri) return;
     setLoading(true);
     try {
-      const data = await analyzeMedicineImage(imageUri);
-      if (data.error) Alert.alert('인식 실패', data.error);
-      else {
-        setResult(data);
-        await saveMedicine(data);
-      }
+      const response = await api.uploadPill(imageUri);
+      const gptData = response.data || {};
+      const govData = response.government_info || {};
+
+      // 백엔드 응답을 UI 포맷으로 변환
+      const result = {
+        medicineName: gptData.pill_name || '알 수 없는 약',
+        dosage: {
+          timing: gptData.dosage_instruction || '정보 없음',
+          frequency: null,
+          perDose: null,
+          maxDaily: null,
+        },
+        ingredients: govData.efcy
+          ? [{ name: '효능', amount: null, effect: govData.efcy }]
+          : [],
+        interactions: govData.intrc
+          ? [{ substance: '상호작용 주의', severity: '주의', description: govData.intrc }]
+          : [],
+        warnings: govData.atpn ? [govData.atpn] : [],
+        storageInfo: govData.use || null,
+      };
+
+      setResult(result);
+      await saveMedicine(result);
     } catch (e) {
-      Alert.alert('오류', e.message || '분석 중 오류가 발생했습니다.');
+      Alert.alert('오류', e.message || '분석 중 오류가 발생했습니다.\n백엔드 서버가 실행 중인지 확인하세요.');
     } finally {
       setLoading(false);
     }

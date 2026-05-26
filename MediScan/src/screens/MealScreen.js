@@ -10,6 +10,7 @@ import {
   cancelNotification,
   requestNotificationPermission,
 } from '../services/notificationService';
+import { api } from '../services/apiService';
 import { Card, PrimaryButton, SectionHeader } from '../components/UIComponents';
 
 const MEAL_TYPES = [
@@ -40,12 +41,19 @@ export default function MealScreen() {
       Alert.alert('알림 권한 필요', '약 복용 알림을 받으려면 알림 권한을 허용해주세요.');
     }
 
-    // 시스템 알림 예약
+    // 로컬 알림 예약
     try {
       const id = await scheduleMealNotification(selectedMeal, DELAY_MINUTES);
       setNotifId(id);
     } catch (e) {
-      console.warn('알림 예약 실패:', e);
+      console.warn('로컬 알림 예약 실패:', e);
+    }
+
+    // 백엔드 복약 알림 예약 (로그인한 경우에만)
+    try {
+      await api.mealCompleted(selectedMeal);
+    } catch (e) {
+      console.warn('백엔드 알림 예약 실패:', e);
     }
 
     // 화면 타이머 시작
