@@ -1,4 +1,4 @@
-const API_URL = 'http://나중에-받을-AWS-고정-IP:8000/api/v1/ocr/analyze';
+const API_URL = 'https://87q4ymlpsk.execute-api.ap-northeast-2.amazonaws.com/default/api/v1/ocr/analyze';
 
 export async function analyzeMedicineImage(imageUri) {
   const formData = new FormData();
