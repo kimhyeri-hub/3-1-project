@@ -1,5 +1,7 @@
 import 'react-native-gesture-handler';
-import React, { useEffect } from 'react';
+import { enableScreens } from 'react-native-screens';
+enableScreens();
+import React, { useEffect, useState } from 'react';
 import { LogBox } from 'react-native';
 LogBox.ignoreAllLogs();
 import { NavigationContainer } from '@react-navigation/native';
@@ -11,11 +13,11 @@ import * as Notifications from 'expo-notifications';
 import HomeScreen from './src/screens/HomeScreen';
 import MedicineScreen from './src/screens/MedicineScreen';
 import MealScreen from './src/screens/MealScreen';
-import HistoryScreen from './src/screens/HistoryScreen';
-import { COLORS } from './src/utils/theme';
 import MyMedicineScreen from './src/screens/MyMedicineScreen';
+import InteractionResultScreen from './src/screens/InteractionResultScreen';
+import SplashScreen from './src/screens/SplashScreen';
+import { COLORS } from './src/utils/theme';
 
-// 앱 포그라운드 상태에서도 알림 표시
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
     shouldShowAlert: true,
@@ -26,49 +28,72 @@ Notifications.setNotificationHandler({
 
 const Tab = createBottomTabNavigator();
 
+function MedicineTab() {
+  const [resultData, setResultData] = useState(null);
+
+  if (resultData) {
+    return (
+      <InteractionResultScreen
+        result={resultData}
+        onBack={() => setResultData(null)}
+      />
+    );
+  }
+
+  return (
+    <MedicineScreen onAnalyzeDone={(data) => setResultData(data)} />
+  );
+}
+
 export default function App() {
+  const [showSplash, setShowSplash] = useState(true);
+
   useEffect(() => {
-    // 알림 권한 요청
     Notifications.requestPermissionsAsync();
   }, []);
 
   return (
-    <NavigationContainer>
-      <StatusBar style="light" />
-      <Tab.Navigator
-        screenOptions={({ route }) => ({
-          tabBarIcon: ({ focused, color, size }) => {
-            const icons = {
-  '홈': focused ? 'home' : 'home-outline',
-  '약 분석': focused ? 'medical' : 'medical-outline',
-  '식사 알림': focused ? 'restaurant' : 'restaurant-outline',
-  '기록': focused ? 'time' : 'time-outline',
-  '내 약': focused ? 'heart' : 'heart-outline',
-};
-            return <Ionicons name={icons[route.name]} size={size} color={color} />;
-          },
-          tabBarActiveTintColor: COLORS.primary,
-          tabBarInactiveTintColor: COLORS.textMuted,
-          tabBarStyle: {
-            backgroundColor: COLORS.surface,
-            borderTopColor: COLORS.border,
-            borderTopWidth: 0.5,
-            paddingBottom: 40,
-            paddingTop: 6,
-            height: 90,
-          },
-          tabBarLabelStyle: { fontSize: 11, fontWeight: '500' },
-          headerShown: false,
-        })}
-      >
-        <Tab.Screen name="홈" component={HomeScreen} />
-        <Tab.Screen name="약 분석" component={MedicineScreen} />
-        <Tab.Screen name="식사 알림" component={MealScreen} />
-        <Tab.Screen name="기록" component={HistoryScreen} />
-        <Tab.Screen name="내 약" component={MyMedicineScreen} />
-      </Tab.Navigator>
-    </NavigationContainer>
+    <>
+      {showSplash ? (
+        <SplashScreen onFinish={() => setShowSplash(false)} />
+      ) : (
+        <NavigationContainer>
+          <StatusBar style="light" />
+          <Tab.Navigator
+            screenOptions={({ route }) => ({
+              tabBarIcon: ({ focused, color, size }) => {
+                const icons = {
+                  '홈': focused ? 'home' : 'home-outline',
+                  '약 분석': focused ? 'medical' : 'medical-outline',
+                  '내 약': focused ? 'heart' : 'heart-outline',
+                  '식사 알림': focused ? 'restaurant' : 'restaurant-outline',
+                };
+                return <Ionicons name={icons[route.name]} size={size} color={color} />;
+              },
+              tabBarActiveTintColor: COLORS.primary,
+              tabBarInactiveTintColor: COLORS.textMuted,
+              tabBarStyle: {
+                backgroundColor: COLORS.surface,
+                borderTopColor: COLORS.border,
+                borderTopWidth: 0.5,
+                paddingBottom: 20,
+                paddingTop: 6,
+                height: 70,
+              },
+              tabBarLabelStyle: { fontSize: 11, fontWeight: '500' },
+              headerShown: false,
+            })}
+          >
+            <Tab.Screen name="홈" component={HomeScreen} />
+            <Tab.Screen name="약 분석" component={MedicineTab} />
+            <Tab.Screen name="내 약" component={MyMedicineScreen} />
+            <Tab.Screen name="식사 알림" component={MealScreen} />
+          </Tab.Navigator>
+        </NavigationContainer>
+      )}
+    </>
   );
 }
+
 import { registerRootComponent } from 'expo';
 registerRootComponent(App);

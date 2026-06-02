@@ -1,15 +1,40 @@
-const ANTHROPIC_API_KEY = 'YOUR_API_KEY_HERE'; // .env 파일로 관리 권장
-const API_URL = 'https://api.anthropic.com/v1/messages';
+const ANTHROPIC_API_KEY = 'YOUR_API_KEY_HERE';
 
-/**
- * 약봉투 이미지를 base64로 변환 후 Claude Vision API로 분석
- * @param {string} imageUri - 이미지 URI (file:// or content://)
- * @returns {Promise<MedicineInfo>}
- */
+// 더미 데이터 (API 키 없을 때 테스트용)
+const DUMMY_DATA = {
+  medicineName: '타이레놀 500mg',
+  ingredient: '아세트아미노펜 500mg',
+  effect: '해열, 진통 (두통, 치통, 생리통)',
+  ingredients: [
+    { name: '아세트아미노펜', amount: '500mg', effect: '해열, 진통' }
+  ],
+  dosage: {
+    perDose: '1정',
+    frequency: '1일 3~4회',
+    timing: '식후 30분',
+    maxDaily: '4g 초과 금지',
+  },
+  interactions: [
+    { substance: '알코올', severity: '주의', description: '간독성 위험이 높아질 수 있어요.' }
+  ],
+  warnings: [
+    '알코올 복용 시 간독성 위험',
+    '동일 성분 중복 복용 금지',
+  ],
+  storageInfo: '실온 보관 (습기 피할 것)',
+};
+
 export async function analyzeMedicineImage(imageUri) {
-  const base64Image = await uriToBase64(imageUri);
+  // API 키가 없으면 더미 데이터 반환
+  if (!ANTHROPIC_API_KEY || ANTHROPIC_API_KEY === 'YOUR_API_KEY_HERE') {
+    return new Promise((resolve) => {
+      setTimeout(() => resolve(DUMMY_DATA), 2000); // 2초 후 더미 데이터 반환
+    });
+  }
 
-  const response = await fetch(API_URL, {
+  // API 키가 있으면 실제 분석
+  const base64Image = await uriToBase64(imageUri);
+  const response = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -43,18 +68,15 @@ export async function analyzeMedicineImage(imageUri) {
   "dosage": {
     "perDose": "1회 복용량",
     "frequency": "하루 복용 횟수",
-    "timing": "복용 시기 (예: 식후 30분)",
+    "timing": "복용 시기",
     "maxDaily": "1일 최대 복용량"
   },
   "interactions": [
     { "substance": "상호작용 물질", "severity": "주의/위험", "description": "상세 설명" }
   ],
   "warnings": ["주의사항1", "주의사항2"],
-  "storageInfo": "보관 방법",
-  "expiry": "유효기간 (이미지에 있는 경우)"
-}
-
-이미지에서 읽을 수 없는 항목은 null로 처리하고, 약봉투가 아닌 경우 { "error": "약봉투를 인식할 수 없습니다" } 반환.`,
+  "storageInfo": "보관 방법"
+}`,
             },
           ],
         },
@@ -62,9 +84,7 @@ export async function analyzeMedicineImage(imageUri) {
     }),
   });
 
-  if (!response.ok) {
-    throw new Error(`API 오류: ${response.status}`);
-  }
+  if (!response.ok) throw new Error(`API 오류: ${response.status}`);
 
   const data = await response.json();
   const text = data.content[0]?.text || '';
@@ -76,9 +96,6 @@ export async function analyzeMedicineImage(imageUri) {
   }
 }
 
-/**
- * 이미지 URI를 base64 문자열로 변환
- */
 async function uriToBase64(uri) {
   const response = await fetch(uri);
   const blob = await response.blob();

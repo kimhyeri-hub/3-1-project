@@ -58,7 +58,7 @@ export default function MyMedicineScreen() {
         <Text style={styles.headerTitle}>내 약 목록</Text>
       </View>
 
-      <ScrollView style={styles.scroll} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+      <ScrollView style={styles.scroll} contentContainerStyle={[styles.content, { flexGrow: 1 }]} showsVerticalScrollIndicator={false}>
 
         {loading ? (
           <View style={styles.emptyWrap}>
@@ -125,7 +125,7 @@ const styles = StyleSheet.create({
   headerSub: { fontSize: 12, color: 'rgba(255,255,255,0.7)', marginBottom: 2 },
   headerTitle: { fontSize: 24, fontWeight: FONT.medium, color: '#fff' },
   scroll: { flex: 1 },
-  content: { padding: 16, paddingBottom: 32 },
+  content: { padding: 16, paddingBottom: 32, flexGrow: 1 },
   countLabel: {
     fontSize: 13,
     color: COLORS.textSecondary,

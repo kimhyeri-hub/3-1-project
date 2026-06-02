@@ -41,7 +41,7 @@ export default function HomeScreen({ navigation }) {
         <Text style={styles.greetingSub}>복약 잊지 마세요</Text>
       </View>
 
-      <ScrollView style={styles.scroll} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+      <ScrollView style={styles.scroll} contentContainerStyle={[styles.content, { flexGrow: 1 }]} showsVerticalScrollIndicator={false}>
 
         {/* 약 스캔하기 카드 */}
         <TouchableOpacity
@@ -138,7 +138,7 @@ const styles = StyleSheet.create({
     color: 'rgba(255,255,255,0.75)',
   },
   scroll: { flex: 1 },
-  content: { padding: 16, paddingBottom: 32 },
+  content: { padding: 16, paddingBottom: 32, flexGrow: 1 },
 
   // 스캔 카드
   scanCard: {

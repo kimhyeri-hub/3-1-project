@@ -10,7 +10,7 @@ import { COLORS, RADIUS, FONT, SHADOW } from '../utils/theme';
 import { analyzeMedicineImage } from '../services/claudeApi';
 import { Card, Badge, InfoRow, WarningBox, SectionHeader } from '../components/UIComponents';
 
-export default function MedicineScreen() {
+export default function MedicineScreen({ onAnalyzeDone }) {
   const [imageUri, setImageUri] = useState(null);
   const [result, setResult] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -67,6 +67,7 @@ export default function MedicineScreen() {
       else {
         setResult(data);
         await saveMedicine(data);
+        if (onAnalyzeDone) onAnalyzeDone(data);
       }
     } catch (e) {
       Alert.alert('오류', e.message || '분석 중 오류가 발생했습니다.');
@@ -81,7 +82,7 @@ export default function MedicineScreen() {
         <Text style={styles.headerTitle}>약 스캔</Text>
       </View>
 
-      <ScrollView style={styles.scroll} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+      <ScrollView style={styles.scroll} contentContainerStyle={[styles.content, { flexGrow: 1 }]} showsVerticalScrollIndicator={false}>
 
         <Text style={styles.guideText}>처방전이나 알약 사진을 올려주세요</Text>
 
@@ -205,7 +206,7 @@ const styles = StyleSheet.create({
   },
   headerTitle: { fontSize: 18, fontWeight: FONT.medium, color: '#fff' },
   scroll: { flex: 1 },
-  content: { padding: 16, paddingBottom: 32 },
+  content: { padding: 16, paddingBottom: 32, flexGrow: 1 },
   guideText: {
     fontSize: 15,
     color: COLORS.textSecondary,
