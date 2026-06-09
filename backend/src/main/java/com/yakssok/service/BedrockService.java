@@ -27,25 +27,26 @@ public class BedrockService {
 
     public String analyzeMedicineText(String rawText) {
         String prompt = """
-                당신은 복약 지도 전문 AI입니다.
+                당신은 복약 지도 전문 AI입니다. 모든 설명은 의학 지식이 없는 일반인(중학생 수준)도 이해할 수 있는 쉬운 말로 작성해주세요.
                 다음은 약 봉투나 처방전에서 추출된 텍스트입니다:
                 "%s"
 
                 이 내용을 바탕으로 반드시 아래의 JSON 형식으로만 응답해주세요.
                 이미지에서 읽을 수 없는 항목은 null로 처리하고, 약봉투가 아닌 경우 {"error": "약봉투를 인식할 수 없습니다"}를 반환하세요.
+                전문 용어(예: 헬리코박터 파이로리, 평활근, 궤양, 항히스타민 등)는 반드시 누구나 아는 쉬운 말로 바꿔주세요.
 
                 {
                   "medicineName": "약 이름",
                   "simpleDescription": "이 약이 무엇인지 중학생도 이해할 수 있는 쉬운 한 줄 설명 (예: 위에 사는 나쁜 균을 없애서 위궤양을 치료하는 약이에요)",
-                  "ingredients": [{ "name": "성분명", "amount": "용량", "effect": "주요 효능" }],
+                  "ingredients": [{ "name": "성분명", "amount": "용량", "effect": "쉬운 말로 쓴 주요 효능 (예: 위장 근육을 편안하게 풀어줘요)" }],
                   "dosage": {
                     "perDose": "1회 복용량",
                     "frequency": "하루 복용 횟수",
                     "timing": "복용 시기 (예: 식후 30분)",
                     "maxDaily": "1일 최대 복용량"
                   },
-                  "interactions": [{ "substance": "상호작용 물질", "severity": "주의/위험", "description": "상세 설명" }],
-                  "warnings": ["주의사항1", "주의사항2"],
+                  "interactions": [{ "substance": "상호작용 물질", "severity": "주의/위험", "description": "쉬운 말로 쓴 상세 설명" }],
+                  "warnings": ["쉬운 말로 쓴 주의사항1", "쉬운 말로 쓴 주의사항2"],
                   "storageInfo": "보관 방법",
                   "expiry": "유효기간"
                 }
