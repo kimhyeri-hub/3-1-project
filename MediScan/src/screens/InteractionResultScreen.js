@@ -52,21 +52,35 @@ export default function InteractionResultScreen({ result, onBack }) {
             </View>
           </View>
           <SectionHeader title="성분 및 효능" />
-          <View style={styles.ingredientRow}>
-            <View style={styles.ingredientDot} />
-            <View style={{ flex: 1 }}>
-              <Text style={styles.ingredientName}>{data.ingredient}</Text>
-              <Text style={styles.ingredientEffect}>{data.effect}</Text>
+          {data.ingredients?.length > 0 ? (
+            data.ingredients.map((ing, i) => (
+              <View key={i} style={styles.ingredientRow}>
+                <View style={styles.ingredientDot} />
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.ingredientName}>
+                    {ing.name}{ing.amount ? ` (${ing.amount})` : ''}
+                  </Text>
+                  <Text style={styles.ingredientEffect}>{ing.effect}</Text>
+                </View>
+              </View>
+            ))
+          ) : (
+            <View style={styles.ingredientRow}>
+              <View style={styles.ingredientDot} />
+              <View style={{ flex: 1 }}>
+                <Text style={styles.ingredientName}>{data.ingredient || '정보 없음'}</Text>
+                <Text style={styles.ingredientEffect}>{data.effect}</Text>
+              </View>
             </View>
-          </View>
+          )}
         </Card>
 
         <Card>
           <SectionHeader title="복용법 / 용량" />
-          <InfoRow label="1회 복용량" value={data.dosage.perDose} />
-          <InfoRow label="복용 횟수" value={data.dosage.frequency} />
-          <InfoRow label="복용 시기" value={data.dosage.timing} />
-          <InfoRow label="1일 최대" value={data.dosage.maxDaily} last />
+          <InfoRow label="1회 복용량" value={data.dosage?.perDose} />
+          <InfoRow label="복용 횟수" value={data.dosage?.frequency} />
+          <InfoRow label="복용 시기" value={data.dosage?.timing} />
+          <InfoRow label="1일 최대" value={data.dosage?.maxDaily} last />
         </Card>
 
         <Card>
