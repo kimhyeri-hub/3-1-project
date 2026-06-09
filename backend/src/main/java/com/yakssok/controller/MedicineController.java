@@ -5,11 +5,7 @@ import com.yakssok.service.*;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.Base64;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 
 @RestController
 public class MedicineController {
@@ -47,6 +43,8 @@ public class MedicineController {
             @RequestBody Map<String, String> body) {
         try {
             String base64Image = body.get("image");
+            String userId = body.getOrDefault("userId", "anonymous");
+
             if (base64Image == null || base64Image.isBlank()) {
                 return ResponseEntity.badRequest()
                         .body(Map.of("error", "이미지 데이터가 없습니다."));
@@ -65,7 +63,7 @@ public class MedicineController {
                         .body(Map.of("error", "이미지에서 텍스트를 추출할 수 없습니다."));
             }
 
-            // Bedrock Claude 분석
+            // Bedrock 약 정보 분석
             String analysisJson = bedrockService.analyzeMedicineText(rawText);
             @SuppressWarnings("unchecked")
             Map<String, Object> analysisData = objectMapper.readValue(analysisJson, Map.class);
@@ -75,7 +73,8 @@ public class MedicineController {
             }
 
             String pillName = (String) analysisData.getOrDefault("medicineName", "알 수 없는 약");
-
+            @SuppressWarnings("unchecked")
+            List<Map<String, Object>> ingredients = (List<Map<String, Object>>) analysisData.get("ingredients");
             @SuppressWarnings("unchecked")
             Map<String, Object> dosageMap = (Map<String, Object>) analysisData.get("dosage");
             String dosageInstruction = dosageMap != null
@@ -84,18 +83,34 @@ public class MedicineController {
 
             // 식약처 API
             Map<String, String> drugInfo = drugService.getDrugInfo(pillName);
-
             String warningMessage = (drugInfo != null && drugInfo.get("atpn") != null)
                     ? drugInfo.get("atpn") : "정보 없음";
 
+            // 기존 복용 약 조회 → 충돌 검사
+            List<Map<String, Object>> existingMedicines = dynamoDbService.getMedicinesByUserId(userId);
+            Map<String, Object> interactionResult = null;
+
+            if (!existingMedicines.isEmpty() && ingredients != null && !ingredients.isEmpty()) {
+                String interactionJson = bedrockService.checkInteractions(pillName, ingredients, existingMedicines);
+                try {
+                    @SuppressWarnings("unchecked")
+                    Map<String, Object> parsed = objectMapper.readValue(interactionJson, Map.class);
+                    interactionResult = parsed;
+                } catch (Exception ignored) {}
+            }
+
             // DynamoDB 저장
-            String medicineId = dynamoDbService.saveMedicine(pillName, dosageInstruction, warningMessage, s3Key);
+            String medicineId = dynamoDbService.saveMedicine(
+                    userId, pillName, dosageInstruction, warningMessage, s3Key, ingredients);
 
             Map<String, Object> response = new HashMap<>();
             response.put("message", "등록 완료!");
             response.put("medicine_id", medicineId);
             response.put("data", analysisData);
             response.put("government_info", drugInfo);
+            if (interactionResult != null) {
+                response.put("interaction_check", interactionResult);
+            }
 
             return ResponseEntity.ok(response);
 
