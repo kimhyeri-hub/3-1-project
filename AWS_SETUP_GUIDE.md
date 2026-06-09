@@ -31,7 +31,7 @@
 
 ### 0-1. AWS CloudShell 접속 (CLI 설치 불필요)
 
-AWS CloudShell은 AWS 콘솔에 내장된 브라우저 기반 터미널입니다.
+AWS CloudShell은 AWS 콘솔에 dl내장된 브라우저 기반 터미널입니다.
 AWS CLI, Python, git이 모두 사전 설치되어 있습니다.
 
 #### 접속 방법

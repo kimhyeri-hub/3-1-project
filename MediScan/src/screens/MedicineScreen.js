@@ -11,6 +11,7 @@ import { Card, Badge, InfoRow, WarningBox, SectionHeader } from '../components/U
 
 export default function MedicineScreen() {
   const [imageUri, setImageUri] = useState(null);
+  const [imageBase64, setImageBase64] = useState(null);
   const [result, setResult] = useState(null);
   const [loading, setLoading] = useState(false);
 
@@ -25,25 +26,29 @@ export default function MedicineScreen() {
       pickerResult = await ImagePicker.launchCameraAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
         quality: 0.85,
+        base64: true,
       });
     } else {
       pickerResult = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
         quality: 0.85,
+        base64: true,
       });
     }
     if (!pickerResult.canceled) {
       const uri = pickerResult.assets[0].uri;
+      const base64 = pickerResult.assets[0].base64;
       setImageUri(uri);
+      setImageBase64(base64);
       setResult(null);
     }
   };
 
   const analyzeImage = async () => {
-    if (!imageUri) return;
+    if (!imageBase64) return;
     setLoading(true);
     try {
-      const data = await analyzeMedicineImage(imageUri);
+      const data = await analyzeMedicineImage(imageBase64);
       if (data.error) Alert.alert('인식 실패', data.error);
       else setResult(data);
     } catch (e) {
