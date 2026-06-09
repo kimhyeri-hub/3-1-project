@@ -15,20 +15,21 @@ export async function analyzeMedicineImage(base64Image) {
       },
     });
 
+    const text = await response.text();
+
     if (!response.ok) {
       let errMsg = `서버 오류 (${response.status})`;
       try {
-        const errData = await response.json();
+        const errData = JSON.parse(text);
         if (errData.error) errMsg = errData.error;
         if (errData.details) errMsg += '\n상세: ' + errData.details;
       } catch (e) {
-        const textData = await response.text();
-        if (textData) errMsg += `\n내용: ${textData.substring(0, 100)}`;
+        if (text) errMsg += `\n내용: ${text.substring(0, 100)}`;
       }
       throw new Error(errMsg);
     }
 
-    const data = await response.json();
+    const data = JSON.parse(text);
 
     if (data.error) {
       throw new Error(data.error);
