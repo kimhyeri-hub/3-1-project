@@ -30,7 +30,7 @@ export async function analyzeMedicineImage(base64Image) {
       throw new Error(data.error);
     }
 
-    return data;
+    return data.data ?? data;
 
   } catch (error) {
     console.error('OCR 분석 중 에러 발생:', error);
