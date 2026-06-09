@@ -1,10 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity, StyleSheet,
   SafeAreaView, Alert, Platform,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
+import { useFocusEffect } from '@react-navigation/native';
 import { COLORS, RADIUS, FONT, SHADOW } from '../utils/theme';
 
 const STORAGE_KEY = 'my_medicines';
@@ -13,9 +14,11 @@ export default function MyMedicineScreen() {
   const [medicines, setMedicines] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    loadMedicines();
-  }, []);
+  useFocusEffect(
+    useCallback(() => {
+      loadMedicines();
+    }, [])
+  );
 
   const loadMedicines = async () => {
     try {
