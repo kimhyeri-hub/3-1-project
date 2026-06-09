@@ -109,7 +109,13 @@ public class BedrockService {
 
             Map<?, ?> result = objectMapper.readValue(response.body().asUtf8String(), Map.class);
             List<?> content = (List<?>) result.get("content");
-            return (String) ((Map<?, ?>) content.get(0)).get("text");
+            String text = (String) ((Map<?, ?>) content.get(0)).get("text");
+            // 마크다운 코드펜스 제거
+            text = text.strip();
+            if (text.startsWith("```")) {
+                text = text.replaceAll("^```[a-zA-Z]*\\n?", "").replaceAll("```$", "").strip();
+            }
+            return text;
 
         } catch (Exception e) {
             return "{\"error\": \"분석 실패\", \"details\": \"" + e.getMessage() + "\"}";
