@@ -36,6 +36,7 @@ public class BedrockService {
 
                 {
                   "medicineName": "약 이름",
+                  "simpleDescription": "이 약이 무엇인지 중학생도 이해할 수 있는 쉬운 한 줄 설명 (예: 위에 사는 나쁜 균을 없애서 위궤양을 치료하는 약이에요)",
                   "ingredients": [{ "name": "성분명", "amount": "용량", "effect": "주요 효능" }],
                   "dosage": {
                     "perDose": "1회 복용량",

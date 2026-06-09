@@ -51,6 +51,12 @@ export default function InteractionResultScreen({ result, onBack }) {
               <Text style={styles.medSub}>{data.ingredient}</Text>
             </View>
           </View>
+          {data.simpleDescription && (
+            <View style={styles.simpleDescBox}>
+              <Ionicons name="bulb-outline" size={14} color={COLORS.primary} />
+              <Text style={styles.simpleDescText}>{data.simpleDescription}</Text>
+            </View>
+          )}
           <SectionHeader title="성분 및 효능" />
           {data.ingredients?.length > 0 ? (
             data.ingredients.map((ing, i) => (
@@ -180,6 +186,21 @@ const styles = StyleSheet.create({
     marginBottom: 2,
   },
   medSub: { fontSize: 12, color: COLORS.textMuted },
+  simpleDescBox: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 6,
+    backgroundColor: COLORS.primaryLight,
+    borderRadius: RADIUS.md,
+    padding: 10,
+    marginTop: 10,
+  },
+  simpleDescText: {
+    flex: 1,
+    fontSize: 13,
+    color: COLORS.primaryDark,
+    lineHeight: 18,
+  },
   ingredientRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',
