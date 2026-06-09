@@ -10,7 +10,7 @@ import { COLORS, RADIUS, FONT, SHADOW } from '../utils/theme';
 
 const STORAGE_KEY = 'my_medicines';
 
-export default function MyMedicineScreen() {
+export default function MyMedicineScreen({ onShowResult }) {
   const [medicines, setMedicines] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -79,7 +79,12 @@ export default function MyMedicineScreen() {
           <>
             <Text style={styles.countLabel}>복용 중인 약 {medicines.length}개</Text>
             {medicines.map((med) => (
-              <View key={med.id} style={styles.card}>
+              <TouchableOpacity
+                key={med.id}
+                style={styles.card}
+                activeOpacity={0.75}
+                onPress={() => med.fullData && onShowResult?.(med.fullData)}
+              >
                 <View style={styles.cardRow}>
                   <View style={styles.medIcon}>
                     <Ionicons name="medical" size={18} color={COLORS.primary} />
@@ -107,7 +112,7 @@ export default function MyMedicineScreen() {
                     </View>
                   </>
                 )}
-              </View>
+              </TouchableOpacity>
             ))}
           </>
         )}

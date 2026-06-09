@@ -55,6 +55,7 @@ export default function MedicineScreen({ onAnalyzeDone }) {
         ingredient: data.ingredients?.[0]?.name || '성분 정보 없음',
         dosage: data.dosage?.frequency || '복용법 정보 없음',
         tags: [],
+        fullData: data,
       };
       list.push(newMed);
       await AsyncStorage.setItem('my_medicines', JSON.stringify(list));

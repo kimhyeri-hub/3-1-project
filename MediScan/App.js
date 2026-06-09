@@ -45,6 +45,23 @@ function MedicineTab() {
   );
 }
 
+function MyMedicineTab() {
+  const [resultData, setResultData] = useState(null);
+
+  if (resultData) {
+    return (
+      <InteractionResultScreen
+        result={resultData}
+        onBack={() => setResultData(null)}
+      />
+    );
+  }
+
+  return (
+    <MyMedicineScreen onShowResult={(data) => setResultData(data)} />
+  );
+}
+
 export default function App() {
   const [showSplash, setShowSplash] = useState(true);
 
@@ -86,7 +103,7 @@ export default function App() {
           >
             <Tab.Screen name="홈" component={HomeScreen} />
             <Tab.Screen name="약 분석" component={MedicineTab} />
-            <Tab.Screen name="내 약" component={MyMedicineScreen} />
+            <Tab.Screen name="내 약" component={MyMedicineTab} />
             <Tab.Screen name="식사 알림" component={MealScreen} />
           </Tab.Navigator>
         </NavigationContainer>
