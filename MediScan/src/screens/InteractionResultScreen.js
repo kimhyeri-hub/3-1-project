@@ -83,25 +83,52 @@ export default function InteractionResultScreen({ result, onBack }) {
           <InfoRow label="1일 최대" value={data.dosage?.maxDaily} last />
         </Card>
 
-        <Card>
-          <SectionHeader title="주의사항" />
-          {data.warnings.map((w, i) => (
-            <WarningBox key={i} text={w} type="warning" />
-          ))}
-        </Card>
+        {data.warnings?.length > 0 && (
+          <Card>
+            <SectionHeader title="주의사항" />
+            {data.warnings.map((w, i) => (
+              <WarningBox key={i} text={w} type="warning" />
+            ))}
+          </Card>
+        )}
 
-        <TouchableOpacity
-          style={styles.compareBtn}
-          activeOpacity={0.85}
-          onPress={() => {}}
-        >
-          <Ionicons name="git-compare-outline" size={18} color="#fff" />
-          <Text style={styles.compareBtnText}>다른 약과 비교하기</Text>
-        </TouchableOpacity>
-
-        <Text style={styles.backendNote}>
-          * 백엔드 연결 후 실제 식약처 데이터로 비교됩니다
-        </Text>
+        {data.interaction_check && (
+          <Card>
+            <View style={styles.conflictHeader}>
+              <Ionicons
+                name={data.interaction_check.hasConflict ? 'warning' : 'checkmark-circle'}
+                size={20}
+                color={data.interaction_check.hasConflict ? '#E53935' : '#43A047'}
+              />
+              <Text style={[
+                styles.conflictTitle,
+                { color: data.interaction_check.hasConflict ? '#E53935' : '#43A047' }
+              ]}>
+                {data.interaction_check.hasConflict ? '복용 중인 약과 충돌 있음' : '복용 중인 약과 충돌 없음'}
+              </Text>
+            </View>
+            {data.interaction_check.summary && (
+              <Text style={styles.conflictSummary}>{data.interaction_check.summary}</Text>
+            )}
+            {data.interaction_check.conflicts?.map((c, i) => (
+              <View key={i} style={styles.conflictItem}>
+                <View style={styles.conflictItemHeader}>
+                  <Text style={styles.conflictMedName}>{c.existingMedicine}</Text>
+                  <View style={[
+                    styles.severityBadge,
+                    { backgroundColor: c.severity === '위험' ? '#FFEBEE' : '#FFF8E1' }
+                  ]}>
+                    <Text style={[
+                      styles.severityText,
+                      { color: c.severity === '위험' ? '#E53935' : '#F9A825' }
+                    ]}>{c.severity}</Text>
+                  </View>
+                </View>
+                <Text style={styles.conflictDesc}>{c.description}</Text>
+              </View>
+            ))}
+          </Card>
+        )}
       </ScrollView>
     </SafeAreaView>
   );
@@ -178,24 +205,39 @@ const styles = StyleSheet.create({
     marginTop: 2,
     lineHeight: 16,
   },
-  compareBtn: {
+  conflictHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
     gap: 8,
-    backgroundColor: COLORS.primary,
-    borderRadius: RADIUS.md,
-    paddingVertical: 15,
+    marginBottom: 8,
+    paddingBottom: 10,
+    borderBottomWidth: 0.5,
+    borderBottomColor: COLORS.borderLight,
+  },
+  conflictTitle: { fontSize: 15, fontWeight: FONT.medium },
+  conflictSummary: {
+    fontSize: 13,
+    color: COLORS.textSecondary,
+    lineHeight: 18,
     marginBottom: 10,
   },
-  compareBtnText: {
-    fontSize: 15,
-    fontWeight: FONT.medium,
-    color: '#fff',
+  conflictItem: {
+    paddingVertical: 10,
+    borderBottomWidth: 0.5,
+    borderBottomColor: COLORS.borderLight,
   },
-  backendNote: {
-    fontSize: 11,
-    color: COLORS.textMuted,
-    textAlign: 'center',
+  conflictItemHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 4,
   },
+  conflictMedName: { fontSize: 14, fontWeight: FONT.medium, color: COLORS.textPrimary },
+  severityBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 10,
+  },
+  severityText: { fontSize: 11, fontWeight: FONT.medium },
+  conflictDesc: { fontSize: 12, color: COLORS.textSecondary, lineHeight: 17 },
 });

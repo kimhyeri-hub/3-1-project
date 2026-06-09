@@ -1,10 +1,14 @@
+import { getUserId } from './userService';
+
 const API_URL = 'https://j77prte6ibmlvzdow3z5sumiai0wzgxh.lambda-url.ap-northeast-2.on.aws/api/v1/ocr/analyze';
 
 export async function analyzeMedicineImage(base64Image) {
   try {
+    const userId = await getUserId();
+
     const response = await fetch(API_URL, {
       method: 'POST',
-      body: JSON.stringify({ image: base64Image }),
+      body: JSON.stringify({ image: base64Image, userId }),
       headers: {
         'Content-Type': 'application/json',
         'Accept': 'application/json',
