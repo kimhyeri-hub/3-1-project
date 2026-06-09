@@ -78,7 +78,7 @@ export default function HomeScreen({ navigation }) {
         <View style={styles.scheduleSection}>
           <View style={styles.sectionHeaderRow}>
             <Text style={styles.sectionTitle}>오늘의 복약 일정</Text>
-            <TouchableOpacity onPress={() => navigation.navigate('기록')}>
+            <TouchableOpacity onPress={() => navigation.navigate('내 약')}>
               <Text style={styles.sectionMore}>전체보기</Text>
             </TouchableOpacity>
           </View>
