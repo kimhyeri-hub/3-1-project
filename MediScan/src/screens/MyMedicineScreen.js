@@ -1,7 +1,7 @@
 import React, { useState, useCallback } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity, StyleSheet,
-  SafeAreaView, Alert, Platform,
+  SafeAreaView, Alert, Platform, RefreshControl,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
@@ -13,6 +13,7 @@ const STORAGE_KEY = 'my_medicines';
 export default function MyMedicineScreen({ onShowResult }) {
   const [medicines, setMedicines] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
 
   useFocusEffect(
     useCallback(() => {
@@ -23,12 +24,18 @@ export default function MyMedicineScreen({ onShowResult }) {
   const loadMedicines = async () => {
     try {
       const raw = await AsyncStorage.getItem(STORAGE_KEY);
-      if (raw) setMedicines(JSON.parse(raw));
+      setMedicines(raw ? JSON.parse(raw) : []);
     } catch (e) {
       console.error('불러오기 실패:', e);
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
+  };
+
+  const onRefresh = () => {
+    setRefreshing(true);
+    loadMedicines();
   };
 
   const deleteMedicine = (id) => {
@@ -61,7 +68,12 @@ export default function MyMedicineScreen({ onShowResult }) {
         <Text style={styles.headerTitle}>내 약 목록</Text>
       </View>
 
-      <ScrollView style={styles.scroll} contentContainerStyle={[styles.content, { flexGrow: 1 }]} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        style={styles.scroll}
+        contentContainerStyle={[styles.content, { flexGrow: 1 }]}
+        showsVerticalScrollIndicator={false}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[COLORS.primary]} />}
+      >
 
         {loading ? (
           <View style={styles.emptyWrap}>
