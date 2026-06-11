@@ -6,7 +6,10 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import { COLORS, RADIUS, FONT, SHADOW } from '../utils/theme';
-import { getMedicines, deleteMedicine, updateMedicine } from '../services/medicineStorage';
+import {
+  getMedicines, deleteMedicine, addScheduleTime, removeScheduleTime,
+  dismissSuggestion as dismissSuggestionApi,
+} from '../services/medicineStorage';
 import {
   scheduleDailyMedicationReminder,
   cancelNotification,
@@ -101,11 +104,7 @@ export default function MyMedicineScreen({ onShowResult }) {
     } catch (e) {
       console.warn('알림 예약 실패:', e);
     }
-    const timeEntry = { id: `${Date.now()}_${Math.random().toString(36).slice(2)}`, hour, minute, notificationId };
-    const updated = await updateMedicine(med.id, (m) => ({
-      ...m,
-      schedule: { ...(m.schedule || {}), times: [...(m.schedule?.times || []), timeEntry] },
-    }));
+    const updated = await addScheduleTime(med.id, hour, minute, notificationId);
     setMedicines(updated);
   };
 
@@ -123,10 +122,7 @@ export default function MyMedicineScreen({ onShowResult }) {
         console.warn('알림 취소 실패:', e);
       }
     }
-    const updated = await updateMedicine(med.id, (m) => ({
-      ...m,
-      schedule: { ...(m.schedule || {}), times: (m.schedule?.times || []).filter((t) => t.id !== timeEntry.id) },
-    }));
+    const updated = await removeScheduleTime(med.id, timeEntry.id);
     setMedicines(updated);
   };
 
@@ -139,10 +135,7 @@ export default function MyMedicineScreen({ onShowResult }) {
   };
 
   const dismissSuggestion = async (med) => {
-    const updated = await updateMedicine(med.id, (m) => ({
-      ...m,
-      schedule: { ...(m.schedule || {}), suggestionDismissed: true },
-    }));
+    const updated = await dismissSuggestionApi(med.id);
     setMedicines(updated);
   };
 

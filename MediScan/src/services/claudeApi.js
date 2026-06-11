@@ -1,16 +1,15 @@
 import { getUserId } from './userService';
-import { getMedicinesForInteractionCheck } from './medicineStorage';
+import { API_BASE_URL } from './apiConfig';
 
-const API_URL = 'https://j77prte6ibmlvzdow3z5sumiai0wzgxh.lambda-url.ap-northeast-2.on.aws/api/v1/ocr/analyze';
+const API_URL = `${API_BASE_URL}/api/v1/ocr/analyze`;
 
 export async function analyzeMedicineImage(base64Image) {
   try {
     const userId = await getUserId();
-    const myMedicines = await getMedicinesForInteractionCheck();
 
     const response = await fetch(API_URL, {
       method: 'POST',
-      body: JSON.stringify({ image: base64Image, userId, myMedicines }),
+      body: JSON.stringify({ image: base64Image, userId }),
       headers: {
         'Content-Type': 'application/json',
         'Accept': 'application/json',

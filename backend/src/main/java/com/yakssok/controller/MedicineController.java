@@ -67,13 +67,13 @@ public class MedicineController {
         try {
             String base64Image = (String) body.get("image");
             String userId = (String) body.getOrDefault("userId", "anonymous");
-            @SuppressWarnings("unchecked")
-            List<Map<String, String>> myMedicines = (List<Map<String, String>>) body.get("myMedicines");
 
             if (base64Image == null || base64Image.isBlank()) {
                 return ResponseEntity.badRequest()
                         .body(Map.of("error", "이미지 데이터가 없습니다."));
             }
+
+            dynamoDbService.touchUser(userId);
 
             byte[] imageBytes = Base64.getDecoder().decode(base64Image);
 
@@ -134,12 +134,13 @@ public class MedicineController {
             // DUR 품목정보 (병용금기/연령금기/임부금기 등)
             List<Map<String, String>> durInfo = durProductService.getDurInfo(pillName);
 
-            // 기존 복용 약(DynamoDB + 프론트에서 보낸 "내 약" 목록) 조회 → 충돌 검사
-            Map<String, Object> checks = runInteractionChecks(userId, pillName, ingredients, myMedicines);
+            // 기존 복용 약(DynamoDB) 조회 → 충돌 검사
+            Map<String, Object> checks = runInteractionChecks(userId, pillName, ingredients);
 
             // DynamoDB 저장
             String medicineId = dynamoDbService.saveMedicine(
-                    userId, pillName, dosageInstruction, warningMessage, s3Key, ingredients);
+                    userId, pillName, dosageInstruction, warningMessage, s3Key, ingredients,
+                    objectMapper.writeValueAsString(analysisData), List.of());
 
             Map<String, Object> response = new HashMap<>();
             response.put("message", "등록 완료!");
@@ -166,41 +167,89 @@ public class MedicineController {
         String userId = (String) body.getOrDefault("userId", "anonymous");
         String pillName = (String) body.get("pillName");
         String ingredient = (String) body.getOrDefault("ingredient", "");
-        @SuppressWarnings("unchecked")
-        List<Map<String, String>> myMedicines = (List<Map<String, String>>) body.get("myMedicines");
 
         if (pillName == null || pillName.isBlank()) {
             return ResponseEntity.badRequest().body(Map.of("error", "약 이름이 필요합니다."));
         }
 
         List<String> ingredients = ingredient.isBlank() ? List.of() : List.of(ingredient);
-        return ResponseEntity.ok(runInteractionChecks(userId, pillName, ingredients, myMedicines));
+        return ResponseEntity.ok(runInteractionChecks(userId, pillName, ingredients));
+    }
+
+    @GetMapping("/api/v1/medicines")
+    public ResponseEntity<Map<String, Object>> getMyMedicines(@RequestParam String userId) {
+        dynamoDbService.touchUser(userId);
+        return ResponseEntity.ok(Map.of("medicines", dynamoDbService.getMedicinesByUserId(userId)));
+    }
+
+    @PostMapping("/api/v1/medicines/pill-identify")
+    public ResponseEntity<Map<String, Object>> addPillIdentifyMedicine(@RequestBody Map<String, Object> body) {
+        String userId = (String) body.getOrDefault("userId", "anonymous");
+        String name = (String) body.get("name");
+        String ingredient = (String) body.getOrDefault("ingredient", "");
+        String dosage = (String) body.get("dosage");
+        @SuppressWarnings("unchecked")
+        List<Object> tags = (List<Object>) body.get("tags");
+        @SuppressWarnings("unchecked")
+        Map<String, Object> fullData = (Map<String, Object>) body.get("fullData");
+
+        if (name == null || name.isBlank()) {
+            return ResponseEntity.badRequest().body(Map.of("error", "약 이름이 필요합니다."));
+        }
+
+        dynamoDbService.touchUser(userId);
+        String medicineId = dynamoDbService.addPillIdentifyMedicine(userId, name, ingredient, dosage, tags, fullData);
+        return ResponseEntity.ok(Map.of("message", "추가 완료!", "medicine_id", medicineId));
+    }
+
+    @DeleteMapping("/api/v1/medicines/{medicineId}")
+    public ResponseEntity<Map<String, Object>> deleteMedicine(@PathVariable String medicineId) {
+        List<String> notificationIds = dynamoDbService.deleteSchedulesByMedicineId(medicineId);
+        dynamoDbService.deleteMedicine(medicineId);
+        return ResponseEntity.ok(Map.of("notification_ids", notificationIds));
+    }
+
+    @PostMapping("/api/v1/medicines/{medicineId}/schedules")
+    public ResponseEntity<Map<String, Object>> addSchedule(@PathVariable String medicineId,
+                                                            @RequestBody Map<String, Object> body) {
+        String userId = (String) body.getOrDefault("userId", "anonymous");
+        int hour = ((Number) body.get("hour")).intValue();
+        int minute = ((Number) body.get("minute")).intValue();
+        String notificationId = (String) body.get("notificationId");
+
+        return ResponseEntity.ok(dynamoDbService.addSchedule(medicineId, userId, hour, minute, notificationId));
+    }
+
+    @DeleteMapping("/api/v1/medicines/{medicineId}/schedules/{scheduleId}")
+    public ResponseEntity<Map<String, Object>> deleteSchedule(@PathVariable String medicineId,
+                                                               @PathVariable String scheduleId) {
+        String notificationId = dynamoDbService.deleteSchedule(scheduleId);
+        Map<String, Object> response = new HashMap<>();
+        response.put("notification_id", notificationId);
+        return ResponseEntity.ok(response);
+    }
+
+    @PatchMapping("/api/v1/medicines/{medicineId}/suggestion-dismissed")
+    public ResponseEntity<Map<String, Object>> setSuggestionDismissed(@PathVariable String medicineId,
+                                                                        @RequestBody Map<String, Object> body) {
+        boolean dismissed = Boolean.TRUE.equals(body.get("dismissed"));
+        dynamoDbService.setSuggestionDismissed(medicineId, dismissed);
+        return ResponseEntity.ok(Map.of("medicine_id", medicineId, "suggestion_dismissed", dismissed));
+    }
+
+    @PostMapping("/api/v1/users/touch")
+    public ResponseEntity<Map<String, Object>> touchUser(@RequestBody Map<String, Object> body) {
+        String userId = (String) body.getOrDefault("userId", "anonymous");
+        dynamoDbService.touchUser(userId);
+        return ResponseEntity.ok(Map.of("user_id", userId));
     }
 
     /**
-     * 새 약(pillName)과 사용자의 기존 복용 약(DynamoDB 저장 약 + 프론트에서 보낸 "내 약" 목록)을 비교해
+     * 새 약(pillName)과 사용자의 기존 복용 약(DynamoDB 저장 약 전체)을 비교해
      * 식약처 공식 병용금기 / Bedrock 기반 상호작용 검사 결과를 반환한다.
      */
-    private Map<String, Object> runInteractionChecks(
-            String userId, String pillName, List<?> ingredients, List<Map<String, String>> myMedicines) {
-
-        List<Map<String, Object>> existingMedicines = new ArrayList<>(dynamoDbService.getMedicinesByUserId(userId));
-        Set<String> seenNames = existingMedicines.stream()
-                .map(m -> String.valueOf(m.get("pill_name")).trim().toLowerCase())
-                .collect(Collectors.toCollection(HashSet::new));
-
-        if (myMedicines != null) {
-            for (Map<String, String> med : myMedicines) {
-                String name = med.get("name");
-                if (name == null || name.isBlank()) continue;
-                if (seenNames.add(name.trim().toLowerCase())) {
-                    Map<String, Object> entry = new HashMap<>();
-                    entry.put("pill_name", name);
-                    entry.put("ingredients", med.getOrDefault("ingredient", ""));
-                    existingMedicines.add(entry);
-                }
-            }
-        }
+    private Map<String, Object> runInteractionChecks(String userId, String pillName, List<?> ingredients) {
+        List<Map<String, Object>> existingMedicines = dynamoDbService.getMedicinesByUserId(userId);
 
         Map<String, Object> result = new HashMap<>();
         if (existingMedicines.isEmpty()) {

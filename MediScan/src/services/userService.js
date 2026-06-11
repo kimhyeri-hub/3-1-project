@@ -2,6 +2,7 @@ import * as Device from 'expo-device';
 import * as Application from 'expo-application';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Platform } from 'react-native';
+import { API_BASE_URL } from './apiConfig';
 
 const USER_ID_KEY = 'yakssok_user_id';
 
@@ -36,6 +37,13 @@ export async function getUserId() {
     const userId = simpleHash(raw);
 
     await AsyncStorage.setItem(USER_ID_KEY, userId);
+
+    fetch(`${API_BASE_URL}/api/v1/users/touch`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId }),
+    }).catch(() => {});
+
     return userId;
   } catch (e) {
     return 'unknown_user';

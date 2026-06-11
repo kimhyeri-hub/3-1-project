@@ -7,7 +7,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { COLORS, RADIUS, FONT, SHADOW } from '../utils/theme';
 import { Card, Badge, InfoRow, PrimaryButton, WarningBox } from '../components/UIComponents';
 import { identifyPill, checkPillInteraction } from '../services/pillApi';
-import { addMedicine, getMedicinesForInteractionCheck } from '../services/medicineStorage';
+import { addMedicine } from '../services/medicineStorage';
 import { getUserId } from '../services/userService';
 
 const COLOR_OPTIONS = ['하양', '노랑', '주황', '분홍', '빨강', '갈색', '연두', '초록', '청록', '파랑', '남색', '자주', '보라', '회색', '검정'];
@@ -57,15 +57,13 @@ export default function PillIdentifyScreen() {
     const key = item.item_seq || item.item_name;
     if (addedIds.has(key)) return;
     try {
-      const myMedicines = await getMedicinesForInteractionCheck();
+      await checkInteractionForNewMed(item);
 
       await addMedicine({
-        id: Date.now().toString(),
         name: item.item_name,
-        ingredient: item.class_name || '성분 정보 없음',
+        ingredient: item.class_name || '',
         dosage: '복용법 정보 없음',
         tags: [],
-        schedule: { times: [] },
         fullData: {
           medicineName: item.item_name,
           ingredient: item.class_name,
@@ -75,21 +73,18 @@ export default function PillIdentifyScreen() {
         },
       });
       setAddedIds((prev) => new Set(prev).add(key));
-
-      checkInteractionForNewMed(item, myMedicines);
     } catch (e) {
       console.error('내 약 추가 실패:', e);
     }
   };
 
-  const checkInteractionForNewMed = async (item, myMedicines) => {
+  const checkInteractionForNewMed = async (item) => {
     try {
       const userId = await getUserId();
       const checks = await checkPillInteraction({
         userId,
         pillName: item.item_name,
         ingredient: item.class_name || '',
-        myMedicines,
       });
 
       const messages = [];
