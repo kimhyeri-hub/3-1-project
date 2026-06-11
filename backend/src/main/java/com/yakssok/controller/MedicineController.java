@@ -63,10 +63,30 @@ public class MedicineController {
                         .body(Map.of("error", "이미지에서 텍스트를 추출할 수 없습니다."));
             }
 
-            // Bedrock 약 정보 분석
-            String analysisJson = bedrockService.analyzeMedicineText(rawText);
-            @SuppressWarnings("unchecked")
-            Map<String, Object> analysisData = objectMapper.readValue(analysisJson, Map.class);
+            // 약 이름 추출 → 캐시 확인
+            Map<String, Object> analysisData = null;
+            String cachedName = bedrockService.extractMedicineName(rawText);
+            if (cachedName != null) {
+                String cached = dynamoDbService.getAnalysisCache(cachedName);
+                if (cached != null) {
+                    @SuppressWarnings("unchecked")
+                    Map<String, Object> cachedData = objectMapper.readValue(cached, Map.class);
+                    analysisData = cachedData;
+                }
+            }
+
+            // 캐시 미스 → Bedrock 전체 분석
+            if (analysisData == null) {
+                String analysisJson = bedrockService.analyzeMedicineText(rawText);
+                @SuppressWarnings("unchecked")
+                Map<String, Object> freshData = objectMapper.readValue(analysisJson, Map.class);
+                analysisData = freshData;
+                // 캐시 저장
+                String nameForCache = (String) analysisData.getOrDefault("medicineName", cachedName);
+                if (nameForCache != null && !analysisData.containsKey("error")) {
+                    dynamoDbService.saveAnalysisCache(nameForCache, analysisJson);
+                }
+            }
 
             if (analysisData.containsKey("error")) {
                 return ResponseEntity.badRequest().body(analysisData);

@@ -55,6 +55,27 @@ public class BedrockService {
         return callBedrock(prompt);
     }
 
+    public String extractMedicineName(String rawText) {
+        String prompt = """
+                다음 텍스트에서 약 이름만 추출해. 반드시 JSON으로만 응답: {"name": "약이름"}
+                약이름을 찾을 수 없으면 {"name": null}
+                텍스트: "%s"
+                """.formatted(rawText);
+        try {
+            String result = callBedrock(prompt);
+            result = result.strip();
+            if (result.startsWith("```")) {
+                result = result.replaceAll("^```[a-zA-Z]*\\n?", "").replaceAll("```$", "").strip();
+            }
+            @SuppressWarnings("unchecked")
+            Map<String, Object> parsed = new com.fasterxml.jackson.databind.ObjectMapper().readValue(result, Map.class);
+            Object name = parsed.get("name");
+            return name != null ? name.toString() : null;
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
     public String checkInteractions(String newMedicineName, List<?> newIngredients,
                                      List<Map<String, Object>> existingMedicines) {
         StringBuilder existingMedsText = new StringBuilder();

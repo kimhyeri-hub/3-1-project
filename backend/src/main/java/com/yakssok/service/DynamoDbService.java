@@ -13,6 +13,7 @@ import java.util.stream.Collectors;
 public class DynamoDbService {
 
     private static final String MEDICINES_TABLE = "sgu-yaksok-1-medicines";
+    private static final String CACHE_TABLE = "sgu-yaksok-1-medicine-cache";
 
     private final DynamoDbClient dynamoDbClient;
     private final ObjectMapper objectMapper;
@@ -77,6 +78,31 @@ public class DynamoDbService {
                     return map;
                 })
                 .collect(Collectors.toList());
+    }
+
+    public String getAnalysisCache(String medicineName) {
+        try {
+            Map<String, AttributeValue> key = Map.of(
+                    "medicine_name", AttributeValue.fromS(medicineName.trim())
+            );
+            GetItemResponse response = dynamoDbClient.getItem(
+                    GetItemRequest.builder().tableName(CACHE_TABLE).key(key).build()
+            );
+            if (response.hasItem() && response.item().containsKey("analysis_json")) {
+                return response.item().get("analysis_json").s();
+            }
+        } catch (Exception ignored) {}
+        return null;
+    }
+
+    public void saveAnalysisCache(String medicineName, String analysisJson) {
+        try {
+            Map<String, AttributeValue> item = new HashMap<>();
+            item.put("medicine_name", AttributeValue.fromS(medicineName.trim()));
+            item.put("analysis_json", AttributeValue.fromS(analysisJson));
+            item.put("cached_at", AttributeValue.fromS(LocalDateTime.now().toString()));
+            dynamoDbClient.putItem(PutItemRequest.builder().tableName(CACHE_TABLE).item(item).build());
+        } catch (Exception ignored) {}
     }
 
     public List<Map<String, Object>> getAllMedicines() {
