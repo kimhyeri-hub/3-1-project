@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity, StyleSheet,
-  Image, SafeAreaView, Alert, Platform,
+  Image, SafeAreaView, Alert, Platform, Modal, Animated,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -9,6 +9,51 @@ import { Ionicons } from '@expo/vector-icons';
 import { COLORS, RADIUS, FONT, SHADOW } from '../utils/theme';
 import { analyzeMedicineImage } from '../services/claudeApi';
 import { Card, Badge, InfoRow, WarningBox, SectionHeader } from '../components/UIComponents';
+
+const STEPS = [
+  { icon: 'cloud-upload-outline', text: '이미지 업로드 중...' },
+  { icon: 'scan-outline',         text: '텍스트 인식 중...' },
+  { icon: 'flask-outline',        text: '약 정보 분석 중...' },
+  { icon: 'checkmark-circle-outline', text: '분석 완료!' },
+];
+
+function LoadingOverlay({ visible }) {
+  const [step, setStep] = useState(0);
+  const progress = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    if (!visible) { setStep(0); progress.setValue(0); return; }
+    const timers = [
+      setTimeout(() => setStep(1), 2000),
+      setTimeout(() => setStep(2), 5000),
+    ];
+    Animated.timing(progress, {
+      toValue: 0.85,
+      duration: 20000,
+      useNativeDriver: false,
+    }).start();
+    return () => timers.forEach(clearTimeout);
+  }, [visible]);
+
+  if (!visible) return null;
+
+  return (
+    <Modal transparent animationType="fade" visible={visible}>
+      <View style={ls.overlay}>
+        <View style={ls.box}>
+          <Ionicons name={STEPS[step].icon} size={48} color={COLORS.primary} />
+          <Text style={ls.stepText}>{STEPS[step].text}</Text>
+          <View style={ls.barBg}>
+            <Animated.View style={[ls.barFill, {
+              width: progress.interpolate({ inputRange: [0, 1], outputRange: ['0%', '100%'] })
+            }]} />
+          </View>
+          <Text style={ls.hint}>약봉투 인식에 20~30초 소요될 수 있어요</Text>
+        </View>
+      </View>
+    </Modal>
+  );
+}
 
 export default function MedicineScreen({ onAnalyzeDone }) {
   const [imageUri, setImageUri] = useState(null);
@@ -84,6 +129,7 @@ export default function MedicineScreen({ onAnalyzeDone }) {
 
   return (
     <SafeAreaView style={styles.safe}>
+      <LoadingOverlay visible={loading} />
       <View style={styles.header}>
         <Text style={styles.headerTitle}>약 스캔</Text>
       </View>
@@ -200,6 +246,45 @@ function MedicineResult({ result }) {
     </>
   );
 }
+
+const ls = StyleSheet.create({
+  overlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  box: {
+    backgroundColor: '#fff',
+    borderRadius: RADIUS.lg,
+    padding: 32,
+    alignItems: 'center',
+    width: '80%',
+    gap: 14,
+  },
+  stepText: {
+    fontSize: 16,
+    fontWeight: FONT.medium,
+    color: COLORS.textPrimary,
+  },
+  barBg: {
+    width: '100%',
+    height: 6,
+    backgroundColor: COLORS.borderLight,
+    borderRadius: 3,
+    overflow: 'hidden',
+  },
+  barFill: {
+    height: '100%',
+    backgroundColor: COLORS.primary,
+    borderRadius: 3,
+  },
+  hint: {
+    fontSize: 11,
+    color: COLORS.textMuted,
+    textAlign: 'center',
+  },
+});
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: COLORS.background },
