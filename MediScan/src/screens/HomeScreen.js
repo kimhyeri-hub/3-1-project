@@ -1,18 +1,42 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity,
   StyleSheet, SafeAreaView, Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useFocusEffect } from '@react-navigation/native';
 import { COLORS, RADIUS, FONT, SHADOW } from '../utils/theme';
+import { getMedicines } from '../services/medicineStorage';
+
+const formatHM = (h, m) => `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
 
 export default function HomeScreen({ navigation }) {
   const [currentTime, setCurrentTime] = useState(new Date());
+  const [scheduleItems, setScheduleItems] = useState([]);
 
   useEffect(() => {
     const timer = setInterval(() => setCurrentTime(new Date()), 60000);
     return () => clearInterval(timer);
   }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      getMedicines()
+        .then((medicines) => {
+          const items = medicines.flatMap((med) =>
+            (med.schedule?.times || []).map((t) => ({
+              key: `${med.id}_${t.id}`,
+              medName: med.name,
+              hour: t.hour,
+              minute: t.minute,
+            }))
+          );
+          items.sort((a, b) => (a.hour * 60 + a.minute) - (b.hour * 60 + b.minute));
+          setScheduleItems(items);
+        })
+        .catch((e) => console.error('복약 일정 불러오기 실패:', e));
+    }, [])
+  );
 
   const getGreeting = () => {
     const hour = currentTime.getHours();
@@ -83,11 +107,30 @@ export default function HomeScreen({ navigation }) {
             </TouchableOpacity>
           </View>
 
-          <View style={styles.emptySchedule}>
-            <Text style={styles.emptyEmoji}>💊</Text>
-            <Text style={styles.emptyTitle}>아직 등록된 약이 없어요</Text>
-            <Text style={styles.emptySub}>약을 스캔해서 복약 일정을 만들어 보세요!</Text>
-          </View>
+          {scheduleItems.length === 0 ? (
+            <View style={styles.emptySchedule}>
+              <Text style={styles.emptyEmoji}>💊</Text>
+              <Text style={styles.emptyTitle}>아직 등록된 복약 알림이 없어요</Text>
+              <Text style={styles.emptySub}>"내 약"에서 약을 추가하고{'\n'}복약 알림을 설정해 보세요!</Text>
+            </View>
+          ) : (
+            <View style={styles.scheduleList}>
+              {scheduleItems.map((item) => {
+                const passed = currentTime.getHours() * 60 + currentTime.getMinutes() >= item.hour * 60 + item.minute;
+                return (
+                  <View key={item.key} style={styles.scheduleItem}>
+                    <View style={[styles.scheduleTimeBadge, passed && styles.scheduleTimeBadgeDone]}>
+                      <Text style={[styles.scheduleTimeText, passed && styles.scheduleTimeTextDone]}>
+                        {formatHM(item.hour, item.minute)}
+                      </Text>
+                    </View>
+                    <Text style={styles.scheduleItemName}>{item.medName}</Text>
+                    {passed && <Ionicons name="checkmark-circle" size={18} color={COLORS.primary} />}
+                  </View>
+                );
+              })}
+            </View>
+          )}
         </View>
 
       </ScrollView>
@@ -235,6 +278,42 @@ const styles = StyleSheet.create({
     borderColor: COLORS.border,
   },
   emptyEmoji: { fontSize: 36, marginBottom: 12 },
+
+  scheduleList: { gap: 8 },
+  scheduleItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    backgroundColor: COLORS.surface,
+    borderRadius: RADIUS.lg,
+    padding: 14,
+    borderWidth: 0.5,
+    borderColor: COLORS.border,
+    ...SHADOW.sm,
+  },
+  scheduleTimeBadge: {
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: RADIUS.full,
+    backgroundColor: COLORS.primaryLight,
+  },
+  scheduleTimeBadgeDone: {
+    backgroundColor: COLORS.borderLight,
+  },
+  scheduleTimeText: {
+    fontSize: 12,
+    fontWeight: FONT.medium,
+    color: COLORS.primaryDark,
+  },
+  scheduleTimeTextDone: {
+    color: COLORS.textMuted,
+  },
+  scheduleItemName: {
+    flex: 1,
+    fontSize: 14,
+    fontWeight: FONT.medium,
+    color: COLORS.textPrimary,
+  },
   emptyTitle: {
     fontSize: 15,
     fontWeight: FONT.medium,

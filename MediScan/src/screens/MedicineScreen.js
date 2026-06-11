@@ -4,10 +4,10 @@ import {
   Image, SafeAreaView, Alert, Platform,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS, RADIUS, FONT, SHADOW } from '../utils/theme';
 import { analyzeMedicineImage } from '../services/claudeApi';
+import { addMedicine } from '../services/medicineStorage';
 import { Card, Badge, InfoRow, WarningBox, SectionHeader } from '../components/UIComponents';
 
 export default function MedicineScreen({ onAnalyzeDone }) {
@@ -47,18 +47,16 @@ export default function MedicineScreen({ onAnalyzeDone }) {
 
   const saveMedicine = async (data) => {
     try {
-      const raw = await AsyncStorage.getItem('my_medicines');
-      const list = raw ? JSON.parse(raw) : [];
       const newMed = {
         id: Date.now().toString(),
         name: data.medicineName,
         ingredient: data.ingredients?.[0]?.name || '성분 정보 없음',
         dosage: data.dosage?.frequency || '복용법 정보 없음',
         tags: [],
+        schedule: { times: [] },
         fullData: data,
       };
-      list.push(newMed);
-      await AsyncStorage.setItem('my_medicines', JSON.stringify(list));
+      await addMedicine(newMed);
     } catch (e) {
       console.error('약 저장 실패:', e);
     }

@@ -1,15 +1,17 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity, StyleSheet,
   SafeAreaView, Alert, Platform, Animated, TextInput,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useFocusEffect } from '@react-navigation/native';
 import { COLORS, RADIUS, FONT } from '../utils/theme';
 import {
   scheduleMealNotification,
   cancelNotification,
   requestNotificationPermission,
 } from '../services/notificationService';
+import { getMedicines } from '../services/medicineStorage';
 
 const MEAL_TYPES = [
   { key: 'breakfast', label: '아침', icon: 'sunny-outline', time: '07:00 - 09:00', color: '#F5A623' },
@@ -32,6 +34,8 @@ export default function MealScreen() {
   const [timerState, setTimerState] = useState('idle');
   const [remaining, setRemaining] = useState(30 * 60);
   const [notifId, setNotifId] = useState(null);
+  const [medicines, setMedicines] = useState([]);
+  const [selectedMedicineNames, setSelectedMedicineNames] = useState([]);
   const intervalRef = useRef(null);
   const progressAnim = useRef(new Animated.Value(1)).current;
   const customAnim = useRef(new Animated.Value(0)).current;
@@ -39,6 +43,18 @@ export default function MealScreen() {
   useEffect(() => {
     return () => clearInterval(intervalRef.current);
   }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      getMedicines().then(setMedicines).catch((e) => console.error('약 목록 불러오기 실패:', e));
+    }, [])
+  );
+
+  const toggleMedicineSelect = (name) => {
+    setSelectedMedicineNames((prev) =>
+      prev.includes(name) ? prev.filter((n) => n !== name) : [...prev, name]
+    );
+  };
 
   const showCustomInput = (show) => {
     Animated.timing(customAnim, {
@@ -74,7 +90,7 @@ export default function MealScreen() {
     if (!granted) Alert.alert('알림 권한 필요', '약 복용 알림을 받으려면 알림 권한을 허용해주세요.');
 
     try {
-      const id = await scheduleMealNotification(selectedMeal, minutes);
+      const id = await scheduleMealNotification(selectedMeal, minutes, selectedMedicineNames);
       setNotifId(id);
     } catch (e) { console.warn('알림 예약 실패:', e); }
 
@@ -113,6 +129,7 @@ export default function MealScreen() {
     setSelectedMeal(null);
     setSelectedTime(30);
     setIsCustom(false);
+    setSelectedMedicineNames([]);
     showCustomInput(false);
   };
 
@@ -187,6 +204,28 @@ export default function MealScreen() {
               })}
             </View>
 
+            {/* 복용할 약 선택 */}
+            {medicines.length > 0 && (
+              <>
+                <Text style={styles.secLabel}>복용할 약 선택 (선택)</Text>
+                <View style={styles.medChipRow}>
+                  {medicines.map((med) => {
+                    const isActive = selectedMedicineNames.includes(med.name);
+                    return (
+                      <TouchableOpacity
+                        key={med.id}
+                        style={[styles.medChip, isActive && styles.medChipActive]}
+                        onPress={() => toggleMedicineSelect(med.name)}
+                        activeOpacity={0.8}
+                      >
+                        <Text style={[styles.medChipText, isActive && styles.medChipTextActive]}>{med.name}</Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+              </>
+            )}
+
             {/* 직접 입력 (애니메이션) */}
             <Animated.View style={[styles.customWrap, { height: customHeight, opacity: customOpacity, overflow: 'hidden' }]}>
               <View style={styles.customRow}>
@@ -253,6 +292,9 @@ export default function MealScreen() {
               <Text style={styles.timerUnit}>남은 시간</Text>
             </View>
             <Text style={styles.timerCaption}>{finalMinutes}분 후 약 복용 알림이 울려요</Text>
+            {selectedMedicineNames.length > 0 && (
+              <Text style={styles.medReminderText}>복용할 약: {selectedMedicineNames.join(', ')}</Text>
+            )}
             <View style={styles.progressTrack}>
               <Animated.View style={[styles.progressFill, { width: progressWidth, backgroundColor: selectedMealInfo?.color }]} />
             </View>
@@ -269,7 +311,10 @@ export default function MealScreen() {
             </View>
             <Text style={styles.doneTitle}>약 복용 시간입니다!</Text>
             <Text style={styles.doneDesc}>
-              {selectedMealInfo?.label} 식사 후 {finalMinutes}분이 지났어요.{'\n'}처방약을 복용해주세요.
+              {selectedMealInfo?.label} 식사 후 {finalMinutes}분이 지났어요.{'\n'}
+              {selectedMedicineNames.length > 0
+                ? `${selectedMedicineNames.join(', ')} 복용해주세요.`
+                : '처방약을 복용해주세요.'}
             </Text>
             <TouchableOpacity style={styles.startBtn} onPress={resetDone}>
               <Ionicons name="checkmark-circle-outline" size={18} color="#fff" />
@@ -333,6 +378,19 @@ const styles = StyleSheet.create({
   chipNumActive: { color: COLORS.primary },
   chipDesc: { fontSize: 9, color: COLORS.textMuted },
   chipDescActive: { color: COLORS.primary },
+
+  medChipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 7, marginBottom: 14 },
+  medChip: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: RADIUS.full,
+    backgroundColor: COLORS.surface,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  medChipActive: { borderColor: COLORS.primary, backgroundColor: COLORS.primaryLight },
+  medChipText: { fontSize: 12, color: COLORS.textSecondary },
+  medChipTextActive: { color: COLORS.primaryDark, fontWeight: FONT.medium },
 
   customWrap: { marginBottom: 4 },
   customRow: {
@@ -405,7 +463,8 @@ const styles = StyleSheet.create({
   },
   timerNum: { fontSize: 36, fontWeight: FONT.medium, letterSpacing: -1 },
   timerUnit: { fontSize: 11, color: COLORS.textMuted, marginTop: 2 },
-  timerCaption: { fontSize: 13, color: COLORS.textSecondary, marginBottom: 18 },
+  timerCaption: { fontSize: 13, color: COLORS.textSecondary, marginBottom: 8 },
+  medReminderText: { fontSize: 12, color: COLORS.primaryDark, fontWeight: FONT.medium, marginBottom: 10, textAlign: 'center' },
   progressTrack: {
     width: '80%', height: 4, backgroundColor: COLORS.borderLight,
     borderRadius: 2, overflow: 'hidden', marginBottom: 18,

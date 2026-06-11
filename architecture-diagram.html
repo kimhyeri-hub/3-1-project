@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>Yaksok Architecture (수정안)</title>
+<style>
+  body {
+    font-family: "Pretendard", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+    background: #fafafa;
+    padding: 30px;
+    color: #2b2b2b;
+  }
+  .diagram {
+    max-width: 1100px;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+  }
+  .layer {
+    border-radius: 16px;
+    padding: 22px 28px;
+    margin-bottom: 0;
+  }
+  .layer-title {
+    font-size: 18px;
+    font-weight: 600;
+    margin-bottom: 14px;
+  }
+  .layer-sub {
+    text-align: center;
+    margin-bottom: 6px;
+  }
+  .layer-sub h2 {
+    font-size: 24px;
+    font-weight: 800;
+    margin: 0 0 6px 0;
+  }
+  .layer-sub p {
+    font-size: 14px;
+    color: #555;
+    margin: 0;
+  }
+  .row {
+    display: flex;
+    gap: 14px;
+    margin-top: 14px;
+    align-items: stretch;
+  }
+  .box {
+    flex: 1;
+    border-radius: 10px;
+    padding: 14px 16px;
+    text-align: center;
+    background: #fff;
+  }
+  .box h3 {
+    font-size: 16px;
+    font-weight: 700;
+    margin: 0 0 6px 0;
+  }
+  .box p {
+    font-size: 12.5px;
+    color: #666;
+    margin: 0;
+    line-height: 1.5;
+  }
+  .arrow {
+    text-align: center;
+    padding: 10px 0;
+    color: #888;
+    font-size: 13px;
+  }
+  .arrow .glyph {
+    font-size: 20px;
+    display: block;
+    line-height: 1;
+  }
+
+  /* Frontend */
+  .frontend { background: #eaf5ec; }
+  .frontend .layer-title { color: #4a8a5a; }
+
+  /* Backend */
+  .backend { background: #e2eef9; }
+  .backend .layer-title { color: #3b6fa6; }
+  .backend .box { border: 1px solid #c6dcf2; }
+  .backend .box.changed { background: #fff8e1; border-color: #f0d98c; }
+  .backend .box h3 { color: #2f5d8a; }
+  .backend .box.cloudwatch { background: #f1f1f1; border: 1px dashed #bbb; }
+  .backend .box.cloudwatch h3 { color: #666; }
+
+  /* AI Processing */
+  .ai { background: #ece7f8; }
+  .ai .layer-title { color: #6c4fb6; }
+  .ai .box { border: 1px solid #ddd6f3; }
+  .ai .box.s3 h3 { color: #c9941a; }
+  .ai .box.s3 { background: #fdf6e3; border-color: #f3e4b8; }
+  .ai .box.vision h3 { color: #d6566a; }
+  .ai .box.vision { background: #fdecee; border-color: #f7d3d8; }
+  .ai .box.bedrock h3 { color: #6c4fb6; }
+  .ai .box.bedrock { background: #f1eefb; border-color: #ded6f5; }
+  .ai .box.bedrock.changed { outline: 2px solid #f0a500; outline-offset: 2px; }
+
+  /* Data */
+  .data { background: #eaf2db; }
+  .data .layer-title { color: #6f8c3a; }
+  .data .box.gov { background: #eef5e0; border: 1px solid #d6e6bd; }
+  .data .box.gov h3 { color: #6f8c3a; }
+  .data .box.gov.changed { outline: 2px solid #f0a500; outline-offset: 2px; }
+  .data .box.dynamo { background: #fff; border: 1px solid #cfe3a8; }
+  .data .box.dynamo h3 { color: #5a7a2e; }
+
+  .badge {
+    display: inline-block;
+    background: #f0a500;
+    color: #fff;
+    font-size: 10px;
+    font-weight: 700;
+    border-radius: 4px;
+    padding: 1px 6px;
+    margin-left: 6px;
+    vertical-align: middle;
+  }
+</style>
+</head>
+<body>
+<div class="diagram">
+
+  <!-- Frontend -->
+  <div class="layer frontend">
+    <div class="layer-title">Frontend Layer</div>
+    <div class="layer-sub">
+      <h2>React Native / Expo</h2>
+      <p>약 봉투·처방전 촬영 · 복약 일정 관리 · DUR 결과 확인</p>
+    </div>
+  </div>
+
+  <div class="arrow"><span class="glyph">↓</span>HTTPS / REST</div>
+
+  <!-- Backend -->
+  <div class="layer backend">
+    <div class="layer-title">Backend Layer</div>
+    <div class="row">
+      <div class="box changed">
+        <h3>AWS Lambda Function URL <span class="badge">수정</span></h3>
+        <p>HTTPS 엔드포인트 제공 (API Gateway 미사용)</p>
+      </div>
+      <div class="box changed">
+        <h3>Spring Boot (Java) on Lambda <span class="badge">수정</span></h3>
+        <p>비즈니스 로직 처리 (FastAPI+EC2 → 대체)</p>
+      </div>
+      <div class="box cloudwatch">
+        <h3>CloudWatch</h3>
+        <p>로그 · 모니터링</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="arrow"><span class="glyph">↓</span>이미지 업로드 / OCR 요청</div>
+
+  <!-- AI Processing -->
+  <div class="layer ai">
+    <div class="layer-title">AI Processing Layer</div>
+    <div class="row">
+      <div class="box s3">
+        <h3>Amazon S3</h3>
+        <p>이미지 원본 저장</p>
+      </div>
+      <div class="box vision">
+        <h3>Google Cloud Vision</h3>
+        <p>OCR 텍스트 추출</p>
+      </div>
+      <div class="box bedrock changed">
+        <h3>AWS Bedrock Claude <span class="badge">보완</span></h3>
+        <p>약품명 정제·분석 · 약물 상호작용 검사</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="arrow"><span class="glyph">↓</span>의약품 정보 조회 · 저장</div>
+
+  <!-- Data -->
+  <div class="layer data">
+    <div class="layer-title">Data Layer</div>
+    <div class="row">
+      <div class="box gov changed">
+        <h3>식약처 의약품개요정보 API (e약은요) <span class="badge">수정</span></h3>
+        <p>효능 · 용법 · 주의사항 조회</p>
+      </div>
+      <div class="box dynamo">
+        <h3>Amazon DynamoDB</h3>
+        <p>NoSQL · 사용자·복약 이력 / 분석 캐시 저장</p>
+      </div>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>
