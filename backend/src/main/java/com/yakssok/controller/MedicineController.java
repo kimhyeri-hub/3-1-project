@@ -137,10 +137,21 @@ public class MedicineController {
             // 기존 복용 약(DynamoDB) 조회 → 충돌 검사
             Map<String, Object> checks = runInteractionChecks(userId, pillName, ingredients);
 
+            // "내 약"에서 다시 볼 때도 분석 시점의 식약처 정보/상호작용 결과가 보이도록 함께 저장
+            Map<String, Object> fullDataForStorage = new LinkedHashMap<>(analysisData);
+            fullDataForStorage.put("government_info", drugInfo);
+            fullDataForStorage.put("dur_info", durInfo);
+            if (checks.containsKey("interaction_check")) {
+                fullDataForStorage.put("interaction_check", checks.get("interaction_check"));
+            }
+            if (checks.containsKey("official_interaction_check")) {
+                fullDataForStorage.put("official_interaction_check", checks.get("official_interaction_check"));
+            }
+
             // DynamoDB 저장
             String medicineId = dynamoDbService.saveMedicine(
                     userId, pillName, dosageInstruction, warningMessage, s3Key, ingredients,
-                    objectMapper.writeValueAsString(analysisData), List.of());
+                    objectMapper.writeValueAsString(fullDataForStorage), List.of());
 
             Map<String, Object> response = new HashMap<>();
             response.put("message", "등록 완료!");

@@ -3,6 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <title>Yaksok Architecture (수정안)</title>
+<link rel="stylesheet" as="style" crossorigin
+  href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
 <style>
   body {
     font-family: "Pretendard", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
@@ -85,7 +87,6 @@
   .backend { background: #e2eef9; }
   .backend .layer-title { color: #3b6fa6; }
   .backend .box { border: 1px solid #c6dcf2; }
-  .backend .box.changed { background: #fff8e1; border-color: #f0d98c; }
   .backend .box h3 { color: #2f5d8a; }
   .backend .box.cloudwatch { background: #f1f1f1; border: 1px dashed #bbb; }
   .backend .box.cloudwatch h3 { color: #666; }
@@ -100,28 +101,14 @@
   .ai .box.vision { background: #fdecee; border-color: #f7d3d8; }
   .ai .box.bedrock h3 { color: #6c4fb6; }
   .ai .box.bedrock { background: #f1eefb; border-color: #ded6f5; }
-  .ai .box.bedrock.changed { outline: 2px solid #f0a500; outline-offset: 2px; }
 
   /* Data */
   .data { background: #eaf2db; }
   .data .layer-title { color: #6f8c3a; }
   .data .box.gov { background: #eef5e0; border: 1px solid #d6e6bd; }
   .data .box.gov h3 { color: #6f8c3a; }
-  .data .box.gov.changed { outline: 2px solid #f0a500; outline-offset: 2px; }
   .data .box.dynamo { background: #fff; border: 1px solid #cfe3a8; }
   .data .box.dynamo h3 { color: #5a7a2e; }
-
-  .badge {
-    display: inline-block;
-    background: #f0a500;
-    color: #fff;
-    font-size: 10px;
-    font-weight: 700;
-    border-radius: 4px;
-    padding: 1px 6px;
-    margin-left: 6px;
-    vertical-align: middle;
-  }
 </style>
 </head>
 <body>
@@ -131,7 +118,7 @@
   <div class="layer frontend">
     <div class="layer-title">Frontend Layer</div>
     <div class="layer-sub">
-      <h2>React Native / Expo</h2>
+      <h2>React Native 0.81 / Expo SDK 54</h2>
       <p>약 봉투·처방전 촬영 · 복약 일정 관리 · DUR 결과 확인</p>
     </div>
   </div>
@@ -142,13 +129,13 @@
   <div class="layer backend">
     <div class="layer-title">Backend Layer</div>
     <div class="row">
-      <div class="box changed">
-        <h3>AWS Lambda Function URL <span class="badge">수정</span></h3>
-        <p>HTTPS 엔드포인트 제공 (API Gateway 미사용)</p>
+      <div class="box">
+        <h3>AWS Lambda Function URL</h3>
+        <p>HTTPS 엔드포인트 제공</p>
       </div>
-      <div class="box changed">
-        <h3>Spring Boot (Java) on Lambda <span class="badge">수정</span></h3>
-        <p>비즈니스 로직 처리 (FastAPI+EC2 → 대체)</p>
+      <div class="box">
+        <h3>Spring Boot 3.2.5 (Java) on Lambda</h3>
+        <p>비즈니스 로직 처리</p>
       </div>
       <div class="box cloudwatch">
         <h3>CloudWatch</h3>
@@ -168,11 +155,11 @@
         <p>이미지 원본 저장</p>
       </div>
       <div class="box vision">
-        <h3>Google Cloud Vision</h3>
+        <h3>Google Cloud Vision API v1</h3>
         <p>OCR 텍스트 추출</p>
       </div>
-      <div class="box bedrock changed">
-        <h3>AWS Bedrock Claude <span class="badge">보완</span></h3>
+      <div class="box bedrock">
+        <h3>AWS Bedrock Claude</h3>
         <p>약품명 정제·분석 · 약물 상호작용 검사</p>
       </div>
     </div>
@@ -184,8 +171,8 @@
   <div class="layer data">
     <div class="layer-title">Data Layer</div>
     <div class="row">
-      <div class="box gov changed">
-        <h3>식약처 의약품개요정보 API (e약은요) <span class="badge">수정</span></h3>
+      <div class="box gov">
+        <h3>식약처 의약품개요정보 API (e약은요)</h3>
         <p>효능 · 용법 · 주의사항 조회</p>
       </div>
       <div class="box dynamo">

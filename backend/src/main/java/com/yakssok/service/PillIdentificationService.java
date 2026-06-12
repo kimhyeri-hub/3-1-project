@@ -39,7 +39,7 @@ public class PillIdentificationService {
     /** 약 이름으로 낱알식별 정보(색상/모양/식별문자/이미지)를 조회한다. */
     public List<Map<String, String>> searchByName(String itemName) {
         Map<String, String> params = new LinkedHashMap<>();
-        params.put("itemName", itemName);
+        params.put("item_name", itemName);
         return search(params);
     }
 
