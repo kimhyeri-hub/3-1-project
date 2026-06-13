@@ -6,6 +6,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
 @RestController
 public class MedicineController {
@@ -16,16 +17,25 @@ public class MedicineController {
     private final DynamoDbService dynamoDbService;
     private final S3Service s3Service;
     private final ObjectMapper objectMapper;
+    private final DurInteractionService durInteractionService;
+    private final DurProductService durProductService;
+    private final PillIdentificationService pillIdentificationService;
 
     public MedicineController(OcrService ocrService, BedrockService bedrockService,
                                DrugService drugService, DynamoDbService dynamoDbService,
-                               S3Service s3Service, ObjectMapper objectMapper) {
+                               S3Service s3Service, ObjectMapper objectMapper,
+                               DurInteractionService durInteractionService,
+                               DurProductService durProductService,
+                               PillIdentificationService pillIdentificationService) {
         this.ocrService = ocrService;
         this.bedrockService = bedrockService;
         this.drugService = drugService;
         this.dynamoDbService = dynamoDbService;
         this.s3Service = s3Service;
         this.objectMapper = objectMapper;
+        this.durInteractionService = durInteractionService;
+        this.durProductService = durProductService;
+        this.pillIdentificationService = pillIdentificationService;
     }
 
     @GetMapping("/")
@@ -38,12 +48,27 @@ public class MedicineController {
         return ResponseEntity.ok(dynamoDbService.getAllMedicines());
     }
 
+    @GetMapping("/api/v1/pill-identify")
+    public ResponseEntity<Map<String, Object>> identifyPill(
+            @RequestParam(required = false) String name,
+            @RequestParam(required = false) String color,
+            @RequestParam(required = false) String shape,
+            @RequestParam(required = false) String markFront,
+            @RequestParam(required = false) String markBack) {
+        List<Map<String, String>> items = (name != null && !name.isBlank())
+                ? pillIdentificationService.searchByName(name)
+                : pillIdentificationService.searchByAppearance(color, shape, markFront, markBack);
+        return ResponseEntity.ok(Map.of("items", items));
+    }
+
     @PostMapping("/api/v1/ocr/analyze")
     public ResponseEntity<Map<String, Object>> analyzeMedicine(
-            @RequestBody Map<String, String> body) {
+            @RequestBody Map<String, Object> body) {
         try {
-            String base64Image = body.get("image");
-            String userId = body.getOrDefault("userId", "anonymous");
+            String base64Image = (String) body.get("image");
+            String userId = (String) body.getOrDefault("userId", "anonymous");
+            @SuppressWarnings("unchecked")
+            List<Map<String, String>> myMedicines = (List<Map<String, String>>) body.get("myMedicines");
 
             if (base64Image == null || base64Image.isBlank()) {
                 return ResponseEntity.badRequest()
@@ -106,18 +131,11 @@ public class MedicineController {
             String warningMessage = (drugInfo != null && drugInfo.get("atpn") != null)
                     ? drugInfo.get("atpn") : "정보 없음";
 
-            // 기존 복용 약 조회 → 충돌 검사
-            List<Map<String, Object>> existingMedicines = dynamoDbService.getMedicinesByUserId(userId);
-            Map<String, Object> interactionResult = null;
+            // DUR 품목정보 (병용금기/연령금기/임부금기 등)
+            List<Map<String, String>> durInfo = durProductService.getDurInfo(pillName);
 
-            if (!existingMedicines.isEmpty() && ingredients != null && !ingredients.isEmpty()) {
-                String interactionJson = bedrockService.checkInteractions(pillName, ingredients, existingMedicines);
-                try {
-                    @SuppressWarnings("unchecked")
-                    Map<String, Object> parsed = objectMapper.readValue(interactionJson, Map.class);
-                    interactionResult = parsed;
-                } catch (Exception ignored) {}
-            }
+            // 기존 복용 약(DynamoDB + 프론트에서 보낸 "내 약" 목록) 조회 → 충돌 검사
+            Map<String, Object> checks = runInteractionChecks(userId, pillName, ingredients, myMedicines);
 
             // DynamoDB 저장
             String medicineId = dynamoDbService.saveMedicine(
@@ -128,8 +146,12 @@ public class MedicineController {
             response.put("medicine_id", medicineId);
             response.put("data", analysisData);
             response.put("government_info", drugInfo);
-            if (interactionResult != null) {
-                response.put("interaction_check", interactionResult);
+            response.put("dur_info", durInfo);
+            if (checks.containsKey("interaction_check")) {
+                response.put("interaction_check", checks.get("interaction_check"));
+            }
+            if (checks.containsKey("official_interaction_check")) {
+                response.put("official_interaction_check", checks.get("official_interaction_check"));
             }
 
             return ResponseEntity.ok(response);
@@ -137,5 +159,75 @@ public class MedicineController {
         } catch (Exception e) {
             return ResponseEntity.internalServerError().body(Map.of("error", e.getMessage()));
         }
+    }
+
+    @PostMapping("/api/v1/pill-identify/check-interaction")
+    public ResponseEntity<Map<String, Object>> checkPillInteraction(@RequestBody Map<String, Object> body) {
+        String userId = (String) body.getOrDefault("userId", "anonymous");
+        String pillName = (String) body.get("pillName");
+        String ingredient = (String) body.getOrDefault("ingredient", "");
+        @SuppressWarnings("unchecked")
+        List<Map<String, String>> myMedicines = (List<Map<String, String>>) body.get("myMedicines");
+
+        if (pillName == null || pillName.isBlank()) {
+            return ResponseEntity.badRequest().body(Map.of("error", "약 이름이 필요합니다."));
+        }
+
+        List<String> ingredients = ingredient.isBlank() ? List.of() : List.of(ingredient);
+        return ResponseEntity.ok(runInteractionChecks(userId, pillName, ingredients, myMedicines));
+    }
+
+    /**
+     * 새 약(pillName)과 사용자의 기존 복용 약(DynamoDB 저장 약 + 프론트에서 보낸 "내 약" 목록)을 비교해
+     * 식약처 공식 병용금기 / Bedrock 기반 상호작용 검사 결과를 반환한다.
+     */
+    private Map<String, Object> runInteractionChecks(
+            String userId, String pillName, List<?> ingredients, List<Map<String, String>> myMedicines) {
+
+        List<Map<String, Object>> existingMedicines = new ArrayList<>(dynamoDbService.getMedicinesByUserId(userId));
+        Set<String> seenNames = existingMedicines.stream()
+                .map(m -> String.valueOf(m.get("pill_name")).trim().toLowerCase())
+                .collect(Collectors.toCollection(HashSet::new));
+
+        if (myMedicines != null) {
+            for (Map<String, String> med : myMedicines) {
+                String name = med.get("name");
+                if (name == null || name.isBlank()) continue;
+                if (seenNames.add(name.trim().toLowerCase())) {
+                    Map<String, Object> entry = new HashMap<>();
+                    entry.put("pill_name", name);
+                    entry.put("ingredients", med.getOrDefault("ingredient", ""));
+                    existingMedicines.add(entry);
+                }
+            }
+        }
+
+        Map<String, Object> result = new HashMap<>();
+        if (existingMedicines.isEmpty()) {
+            return result;
+        }
+
+        // 식약처 공식 병용금기 조회
+        List<String> existingNames = existingMedicines.stream()
+                .map(m -> String.valueOf(m.get("pill_name")))
+                .collect(Collectors.toList());
+        List<Map<String, Object>> rawInteractions = durInteractionService.searchInteractions(pillName);
+        List<Map<String, Object>> matched = durInteractionService.findMatches(rawInteractions, existingNames);
+        Map<String, Object> officialResult = new HashMap<>();
+        officialResult.put("is_prohibited", !matched.isEmpty());
+        officialResult.put("matched_interactions", matched);
+        result.put("official_interaction_check", officialResult);
+
+        // Bedrock 기반 상호작용 검사
+        if (ingredients != null && !ingredients.isEmpty()) {
+            String interactionJson = bedrockService.checkInteractions(pillName, ingredients, existingMedicines);
+            try {
+                @SuppressWarnings("unchecked")
+                Map<String, Object> parsed = objectMapper.readValue(interactionJson, Map.class);
+                result.put("interaction_check", parsed);
+            } catch (Exception ignored) {}
+        }
+
+        return result;
     }
 }

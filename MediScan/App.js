@@ -15,6 +15,7 @@ import MedicineScreen from './src/screens/MedicineScreen';
 import MealScreen from './src/screens/MealScreen';
 import MyMedicineScreen from './src/screens/MyMedicineScreen';
 import InteractionResultScreen from './src/screens/InteractionResultScreen';
+import PillIdentifyScreen from './src/screens/PillIdentifyScreen';
 import SplashScreen from './src/screens/SplashScreen';
 import { COLORS } from './src/utils/theme';
 
@@ -83,6 +84,7 @@ export default function App() {
                   '홈': focused ? 'home' : 'home-outline',
                   '약 분석': focused ? 'medical' : 'medical-outline',
                   '내 약': focused ? 'heart' : 'heart-outline',
+                  '낱알 식별': focused ? 'search-circle' : 'search-circle-outline',
                   '식사 알림': focused ? 'restaurant' : 'restaurant-outline',
                 };
                 return <Ionicons name={icons[route.name]} size={size} color={color} />;
@@ -104,6 +106,7 @@ export default function App() {
             <Tab.Screen name="홈" component={HomeScreen} />
             <Tab.Screen name="약 분석" component={MedicineTab} />
             <Tab.Screen name="내 약" component={MyMedicineTab} />
+            <Tab.Screen name="낱알 식별" component={PillIdentifyScreen} />
             <Tab.Screen name="식사 알림" component={MealScreen} />
           </Tab.Navigator>
         </NavigationContainer>

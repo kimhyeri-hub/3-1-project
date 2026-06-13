@@ -1,14 +1,16 @@
 import { getUserId } from './userService';
+import { getMedicinesForInteractionCheck } from './medicineStorage';
 
 const API_URL = 'https://j77prte6ibmlvzdow3z5sumiai0wzgxh.lambda-url.ap-northeast-2.on.aws/api/v1/ocr/analyze';
 
 export async function analyzeMedicineImage(base64Image) {
   try {
     const userId = await getUserId();
+    const myMedicines = await getMedicinesForInteractionCheck();
 
     const response = await fetch(API_URL, {
       method: 'POST',
-      body: JSON.stringify({ image: base64Image, userId }),
+      body: JSON.stringify({ image: base64Image, userId, myMedicines }),
       headers: {
         'Content-Type': 'application/json',
         'Accept': 'application/json',
@@ -35,7 +37,9 @@ export async function analyzeMedicineImage(base64Image) {
       throw new Error(data.error);
     }
 
-    return data.data ?? data;
+    // 최상위 필드(interaction_check, government_info, dur_info, official_interaction_check 등)와
+    // data.data의 분석 필드(medicineName, ingredients 등)를 모두 합쳐서 반환
+    return { ...data, ...(data.data ?? {}) };
 
   } catch (error) {
     console.error('OCR 분석 중 에러 발생:', error);

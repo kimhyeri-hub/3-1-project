@@ -135,6 +135,39 @@ export default function InteractionResultScreen({ result, onBack }) {
             ))}
           </Card>
         )}
+
+        {data.official_interaction_check && (
+          <Card>
+            <View style={styles.conflictHeader}>
+              <Ionicons
+                name={data.official_interaction_check.is_prohibited ? 'warning' : 'checkmark-circle'}
+                size={20}
+                color={data.official_interaction_check.is_prohibited ? '#E53935' : '#43A047'}
+              />
+              <Text style={[
+                styles.conflictTitle,
+                { color: data.official_interaction_check.is_prohibited ? '#E53935' : '#43A047' }
+              ]}>
+                {data.official_interaction_check.is_prohibited ? '식약처 병용금기 등록 약물 있음' : '식약처 병용금기 없음'}
+              </Text>
+            </View>
+            {data.official_interaction_check.matched_interactions?.map((m, i) => (
+              <View key={i} style={styles.conflictItem}>
+                <Text style={styles.conflictMedName}>{m.drug_a} ↔ {m.drug_b}</Text>
+                <Text style={styles.conflictDesc}>{m.reason}</Text>
+              </View>
+            ))}
+          </Card>
+        )}
+
+        {data.dur_info?.length > 0 && (
+          <Card>
+            <SectionHeader title="DUR 안전 정보 (식약처)" />
+            {data.dur_info.map((d, i) => (
+              <WarningBox key={i} text={`[${d.type_name}] ${d.prohbt_content}`} type="warning" />
+            ))}
+          </Card>
+        )}
       </ScrollView>
     </SafeAreaView>
   );
