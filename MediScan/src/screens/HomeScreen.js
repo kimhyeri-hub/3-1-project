@@ -40,9 +40,10 @@ export default function HomeScreen({ navigation }) {
 
   const getGreeting = () => {
     const hour = currentTime.getHours();
+    if (hour < 6)  return { text: '늦게까지 계시네요', emoji: '🌙' };
     if (hour < 12) return { text: '좋은 아침이에요', emoji: '🌅' };
     if (hour < 18) return { text: '점심 드셨나요?', emoji: '🥗' };
-    return { text: '오늘 하루 수고했어요', emoji: '🌙' };
+    return { text: '오늘 하루 수고했어요', emoji: '🌆' };
   };
 
   const greeting = getGreeting();
