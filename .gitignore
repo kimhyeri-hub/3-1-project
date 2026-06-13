@@ -6,3 +6,6 @@ MediScan/.expo/
 .env
 backend/target/
 backend/src/main/resources/yaksok-gcp-vision-key.json
+.claude/
+s3-bucket-policy.json
+*.zip
